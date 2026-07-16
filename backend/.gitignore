@@ -1,0 +1,28 @@
+# Çevresel değişkenler ve gizli şifreler (KESİNLİKLE GİT'E YÜKLENMEMELİ)
+.env
+
+# Sanal ortam klasörleri (Zaten requirements.txt'den kurulabilir)
+venv/
+env/
+ENV/
+.venv/
+
+# Python derleme dosyaları (Gereksiz kalabalık)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE ve Editör ayarları
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# İşletim sistemi kalıntıları
+.DS_Store
+Thumbs.db
+
+# Test ve Log dosyaları
+*.log
+.pytest_cache/
+htmlcov/
