@@ -1,4 +1,4 @@
-from app.api import user_router
+from app.api import user_router, vehicle_router
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from app.database.session import get_db
@@ -8,6 +8,7 @@ from app.models import station
 app = FastAPI(title="VoltPilot AI API")
 
 app.include_router(user_router.router)
+app.include_router(vehicle_router.router)
 
 @app.get("/")
 def read_root():
