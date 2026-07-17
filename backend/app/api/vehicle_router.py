@@ -5,6 +5,8 @@ from uuid import UUID
 from app.database.session import get_db
 from app.schemas.vehicles_schema import VehicleCreate, VehicleUpdate, VehicleResponse
 from app.services import vehicle_service
+from app.models.user import User
+from app.api.deps import get_current_user
 
 
 router = APIRouter(
@@ -12,34 +14,34 @@ router = APIRouter(
     tags=["Araç İşlemleri"]
 )
 
-@router.post("/user/{user_id}", response_model=VehicleResponse)
+@router.post("/", response_model=VehicleResponse)
 def add_vehicle(
-    user_id: UUID,
     vehicle: VehicleCreate, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     return vehicle_service.create_vehicle(
         db=db,
         vehicle=vehicle,
-        user_id=user_id
+        user_id=current_user.id
     )
 
-@router.get("/user/{user_id}", response_model = List[VehicleResponse])
+@router.get("/", response_model = List[VehicleResponse])
 def get_user_vehicles(
-    user_id : UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return vehicle_service.get_user_vehicles(
         db= db,
-        user_id=user_id
+        user_id=current_user.id
     )
 
-@router.put("/user/{user_id}/{vehicle_id}", response_model = VehicleResponse)
+@router.put("/{vehicle_id}", response_model = VehicleResponse)
 def update_vehicle(
-    user_id :UUID,
     vehicle_id :UUID,
     vehicle_data : VehicleUpdate,
     db: Session = Depends(get_db),
+    current_user: User =Depends(get_current_user)
 ):
     db_vehicle = vehicle_service.get_vehicle_by_id(
         db = db,
@@ -52,7 +54,7 @@ def update_vehicle(
             detail = "Araç Bulunamadı"
         )
 
-    if db_vehicle.user_id != user_id:
+    if db_vehicle.user_id != current_user.id:
         raise HTTPException(
             status_code = 403,
             detail="Bu aracı güncelleme yetkiniz yok!"
@@ -64,11 +66,11 @@ def update_vehicle(
         db_vehicle=db_vehicle
     )
 
-@router.delete("/user/{user_id}/{vehicle_id}")
+@router.delete("/{vehicle_id}")
 def delete_vehicle(
-    user_id :UUID,
     vehicle_id : UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     db_vehicle = vehicle_service.get_vehicle_by_id(
         db = db,
@@ -81,7 +83,7 @@ def delete_vehicle(
             detail = "Araç Bulunamadı"
         )
     
-    if db_vehicle.user_id != user_id:
+    if db_vehicle.user_id != current_user.id:
         raise HTTPException(
             status_code = 403,
             detail="Bu aracı silme yetkiniz yok!"

@@ -5,7 +5,9 @@ from uuid import UUID
 
 from app.database.session import get_db
 from app.schemas.route_schema import RouteCreate, RouteResponse
-from app.services import route_service
+from app.services import route_service, vehicle_service
+from app.api.deps import get_current_user
+from app.models.user import User
 
 router = APIRouter(
     prefix="/routes",
@@ -13,37 +15,47 @@ router = APIRouter(
 )
 
 
-@router.post("/user/{user_id}", response_model=RouteResponse)
+@router.post("/", response_model=RouteResponse)
 def create_route(
-    user_id: UUID,
     route: RouteCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    return route_service.create_route(db=db, route=route, user_id=user_id)
+    vehicles= vehicle_service.get_user_vehicles(
+        db,
+        user_id=current_user.id
+    )
 
+    if len(vehicles) == 0:
+        raise HTTPException(
+            status_code=403,
+            detail = "Araç oluşturmadan rota oluşturamazsınız!"
+        )
+    
+    return route_service.create_route(db=db, route=route, user_id=current_user.id)
 
-@router.get("/user/{user_id}", response_model=List[RouteResponse])
+@router.get("/me", response_model=List[RouteResponse])
 def get_user_routes(
-    user_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    routes = route_service.get_user_routes(db=db, user_id=user_id)
+    routes = route_service.get_user_routes(db=db, user_id=current_user.id)
     if not routes:
-        raise HTTPException(status_code=404, detail="Kullanıcıya ait rota bulunamadı")
+        raise HTTPException(status_code=404, detail="Size ait rota bulunamadı")
     return routes
 
 
-@router.get("/user/{user_id}/{route_id}", response_model=RouteResponse)
+@router.get("/{route_id}", response_model=RouteResponse)
 def get_route(
     route_id: UUID,
-    user_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     db_route = route_service.get_route_by_id(db=db, route_id=route_id)
     if not db_route:
         raise HTTPException(status_code=404, detail="Rota bulunamadı")
 
-    if db_route.user_id != user_id:
+    if db_route.user_id != current_user.id:
         raise HTTPException(
             status_code=403,
             detail="Sadece kendi rotanızı görebilirsiniz."
@@ -51,17 +63,17 @@ def get_route(
     return db_route
 
 
-@router.delete("/user/{user_id}/{route_id}")
+@router.delete("/{route_id}")
 def delete_route(
-    user_id: UUID,
     route_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     db_route = route_service.get_route_by_id(db=db, route_id=route_id)
     if not db_route:
         raise HTTPException(status_code=404, detail="Rota bulunamadı")
         
-    if db_route.user_id != user_id:
+    if db_route.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bu rotayı silme yetkiniz yok!")
         
     route_service.delete_route(db=db, db_route=db_route)

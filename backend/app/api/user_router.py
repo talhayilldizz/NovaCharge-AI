@@ -4,19 +4,21 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from app.database.session import get_db
 from app.schemas.user_schema import UserResponse, UpdateProfile
-from app.services import user_service 
+from app.services import user_service
+from app.models.user import User
+from app.api.deps import get_current_user 
 
 router = APIRouter(
     prefix="/users",
     tags=["Kullanıcı İşlemleri"]
 )
 
-@router.get("/{user_id}", response_model=UserResponse)
+@router.get("/", response_model=UserResponse)
 def get_user_profile(
-    user_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    user = user_service.get_user_by_id(db, user_id)
+    user = user_service.get_user_by_id(db, current_user.id)
 
     if not user:
         raise HTTPException(
@@ -26,13 +28,13 @@ def get_user_profile(
     
     return user
 
-@router.put("/{user_id}", response_model = UserResponse)
+@router.put("/", response_model = UserResponse)
 def update_user_profile(
-    user_id: UUID,
     profile_data: UpdateProfile,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    user = user_service.get_user_by_id(db, user_id)
+    user = user_service.get_user_by_id(db, current_user.id)
 
     if not user:
         raise HTTPException(

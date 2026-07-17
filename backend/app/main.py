@@ -1,4 +1,4 @@
-from app.api import user_router, vehicle_router, station_router, route_router
+from app.api import user_router, vehicle_router, station_router, route_router, favorite_station_router
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from app.database.session import get_db
@@ -11,6 +11,7 @@ app.include_router(user_router.router)
 app.include_router(vehicle_router.router)
 app.include_router(station_router.router)
 app.include_router(route_router.router)
+app.include_router(favorite_station_router.router)
 
 @app.get("/")
 def read_root():

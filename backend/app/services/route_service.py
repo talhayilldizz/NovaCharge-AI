@@ -10,7 +10,11 @@ def get_user_routes(db: Session, user_id: UUID):
     """Kullanıcının geçmişte oluşturduğu tüm rotaları listeler"""
     return db.query(Route).filter(Route.user_id == user_id).all()
 
-def create_route(db: Session, route: RouteCreate, user_id: UUID):
+def create_route(
+    db: Session, 
+    route: RouteCreate, 
+    user_id: UUID
+):
     start_wkt = f"SRID=4326;POINT({route.start_lon} {route.start_lat})"
     end_wkt = f"SRID=4326;POINT({route.end_lon} {route.end_lat})"
     
