@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Float, Integer, ForeignKey, Uuid
+from sqlalchemy import Column, String, Float, Integer, ForeignKey, Uuid, Boolean
 from app.database.session import Base
 
 class Vehicle(Base):
@@ -12,3 +12,4 @@ class Vehicle(Base):
     battery_capacity = Column(Float)        
     range_km = Column(Integer)              
     plug_type = Column(String)              
+    is_primary = Column(Boolean, default=False)
