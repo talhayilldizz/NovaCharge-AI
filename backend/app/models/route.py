@@ -3,6 +3,8 @@ from sqlalchemy import Column, Float, ForeignKey, DateTime, Uuid
 from sqlalchemy.sql import func
 from app.database.session import Base
 from geoalchemy2 import Geometry
+from sqlalchemy.dialects.postgresql import JSONB
+
 
 class Route(Base):
     __tablename__ = "routes"
@@ -16,5 +18,9 @@ class Route(Base):
     
     total_distance_km = Column(Float)
     total_duration_mins = Column(Float)
+  
+    estimated_total_cost = Column(Float, nullable=True)
+    ai_plan = Column(JSONB, nullable=True)
+
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
