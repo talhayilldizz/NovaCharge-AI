@@ -50,3 +50,16 @@ def delete_vehicle(db: Session, db_vehicle: Vehicle):
     db.delete(db_vehicle)
     db.commit()
     return True
+
+def set_primary_vehicle(db: Session, vehicle_id: UUID, user_id: UUID):
+    # First set all vehicles of this user to is_primary = False
+    db.query(Vehicle).filter(Vehicle.user_id == user_id).update({"is_primary": False})
+    
+    # Then set the selected vehicle to is_primary = True
+    db_vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id, Vehicle.user_id == user_id).first()
+    if db_vehicle:
+        db_vehicle.is_primary = True
+    
+    db.commit()
+    db.refresh(db_vehicle)
+    return db_vehicle

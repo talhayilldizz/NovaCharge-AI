@@ -8,6 +8,7 @@ import {
   StatusBar,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -60,19 +61,9 @@ export default function HomeScreen({ navigation }: any) {
       })
     ]).start();
 
-    // 2. Kullanıcı Verisini Çek
+
     const fetchUserData = async () => {
       try {
-        // Supabase'den güncel oturumu al
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session) {
-          console.log("Oturum bulunamadı");
-          setUserName('Misafir Kullanıcı');
-          setIsUserLoading(false);
-          return;
-        }
-
         const response = await apiClient('/users/', { method: 'GET' });
 
         if (response.ok) {
@@ -100,14 +91,23 @@ export default function HomeScreen({ navigation }: any) {
           setFavorites(favData)
         }
 
+
+
         const vehicleResponse = await apiClient('/vehicles', { method: 'GET' });
 
         if (vehicleResponse.ok) {
           const vehicleData = await vehicleResponse.json();
 
-          if (vehicleData.length > 0) {
-            setVehicle(vehicleData[0]);
+          let primaryVehicle;
+
+          for (let i = 0; i < vehicleData.length; i++) {
+            if (vehicleData[i].is_primary === true) {
+              primaryVehicle = vehicleData[i];
+              break;
+            }
           }
+
+          setVehicle(primaryVehicle);
         }
 
 
@@ -131,7 +131,7 @@ export default function HomeScreen({ navigation }: any) {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
@@ -167,7 +167,7 @@ export default function HomeScreen({ navigation }: any) {
                 </View>
 
                 <View style={styles.carImagePlaceholder}>
-                  <MaterialIcons name="directions-car" size={100} color={COLORS.surfaceVariant} />
+                  <Image source={require('../../assets/car.png')} style={{ width: '100%', height: '100%', resizeMode: 'contain' }} />
                 </View>
 
                 <View style={styles.batteryRow}>

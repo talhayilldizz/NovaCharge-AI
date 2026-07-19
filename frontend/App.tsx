@@ -10,6 +10,13 @@ import HomeScreen from './src/screens/HomeScreen';
 import AddVehicleScreen from './src/screens/AddVehicleScreen';
 import VehiclesScreen from './src/screens/VehiclesScreen';
 import VehicleDetailScreen from './src/screens/VehicleDetailScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import PersonalInfoScreen from './src/screens/PersonalInfoScreen';
+import SecurityScreen from './src/screens/SecurityScreen';
+import HelpSupportScreen from './src/screens/HelpSupportScreen';
+import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
+import MapScreen from './src/screens/MapScreen';
+import RoutePlannerScreen from './src/screens/RoutePlannerScreen';
 
 import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 
@@ -78,6 +85,13 @@ export default function App() {
         <Stack.Screen 
           name="VehicleDetail" 
           component={VehicleDetailScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
+        <Stack.Screen name="Security" component={SecurityScreen} />
+        <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
+        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+        <Stack.Screen name="Map" component={MapScreen} />
+        <Stack.Screen name="RoutePlanner" component={RoutePlannerScreen} />
       </Stack.Navigator>
       <Toast config={toastConfig} />
     </NavigationContainer>

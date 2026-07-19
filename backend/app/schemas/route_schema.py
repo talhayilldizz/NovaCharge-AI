@@ -8,7 +8,7 @@ class RouteCreate(BaseModel):
     vehicle_id: UUID
     start_lat: float = Field(..., example=41.0082)
     start_lon: float = Field(..., example=28.9784)
-    end_lon: float = Field(..., example=39.9208)
+    end_lat: float = Field(..., example=39.9208)
     end_lon: float = Field(..., example=32.8541) 
 
     total_distance_km: Optional[float] = None

@@ -7,6 +7,7 @@ import {
   StatusBar,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -23,7 +24,30 @@ const COLORS = {
 };
 
 export default function VehicleDetailScreen({ route, navigation }: any) {
-  const { vehicle } = route.params;
+  const [vehicle, setVehicle] = React.useState(route.params.vehicle);
+
+  const handleSetPrimary = async () => {
+    try {
+      const response = await apiClient(`/vehicles/${vehicle.id}/set-primary`, { method: 'PATCH' });
+      if (response.ok) {
+        Toast.show({
+          type: 'success',
+          text1: 'Başarılı',
+          text2: 'Araç varsayılan yapıldı.'
+        });
+        setVehicle({ ...vehicle, is_primary: true });
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Hata',
+          text2: 'İşlem başarısız oldu.'
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      Toast.show({ type: 'error', text1: 'Bağlantı Hatası', text2: 'Sunucuya ulaşılamadı.' });
+    }
+  };
 
   const handleDelete = () => {
     Alert.alert(
@@ -83,7 +107,7 @@ export default function VehicleDetailScreen({ route, navigation }: any) {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.carImagePlaceholder}>
-          <MaterialIcons name="directions-car" size={120} color={'#353437'} />
+          <Image source={require('../../assets/car.png')} style={{ width: '80%', height: '80%', resizeMode: 'contain' }} />
         </View>
 
         <View style={styles.titleContainer}>
@@ -114,6 +138,17 @@ export default function VehicleDetailScreen({ route, navigation }: any) {
             <Text style={styles.specLabel}>Soket</Text>
           </View>
         </View>
+
+        {!vehicle.is_primary && (
+          <TouchableOpacity
+            style={styles.setPrimaryBlockButton}
+            onPress={handleSetPrimary}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="star-border" size={24} color={COLORS.primary} />
+            <Text style={styles.setPrimaryBlockText}>Bu Aracı Varsayılan Yap</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.actionContainer}>
           <TouchableOpacity
@@ -232,6 +267,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.onSurfaceVariant,
     fontWeight: '500',
+  },
+  setPrimaryBlockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 227, 139, 0.1)',
+    paddingVertical: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 227, 139, 0.2)',
+    marginTop: 16,
+    gap: 8,
+  },
+  setPrimaryBlockText: {
+    color: COLORS.primary,
+    fontSize: 16,
+    fontWeight: '600',
   },
   actionContainer: {
     flexDirection: 'row',

@@ -97,3 +97,34 @@ def delete_vehicle(
     return {
         "message" : "Araç Başarıyla Silindi"
     }
+
+@router.patch("/{vehicle_id}/set-primary", response_model=VehicleResponse)
+def set_primary(
+    vehicle_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_vehicle = vehicle_service.get_vehicle_by_id(
+        db=db,
+        vehicle_id=vehicle_id
+    )
+
+    if not db_vehicle:
+        raise HTTPException(
+            status_code=404,
+            detail="Araç Bulunamadı"
+        )
+    
+    if db_vehicle.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Bu aracı varsayılan yapma yetkiniz yok!"
+        )
+    
+    updated_vehicle = vehicle_service.set_primary_vehicle(
+        db=db,
+        vehicle_id=vehicle_id,
+        user_id=current_user.id
+    )
+
+    return updated_vehicle

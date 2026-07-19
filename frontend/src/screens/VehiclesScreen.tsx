@@ -8,7 +8,7 @@ import {
   StatusBar,
   ActivityIndicator,
   Platform,
-  Alert,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -48,7 +48,12 @@ export default function VehiclesScreen({ navigation }: any) {
         const vehiclesData = await response.json();
 
         if (vehiclesData) {
-          setVehicles(vehiclesData);
+          const sortedVehicles = vehiclesData.sort((a: any, b: any) => {
+            if (a.is_primary && !b.is_primary) return -1;
+            if (!a.is_primary && b.is_primary) return 1;
+            return 0;
+          });
+          setVehicles(sortedVehicles);
         }
       } else {
         console.error("Araçları getirirken bir hata oluştu. Status:", response.status);
@@ -97,6 +102,29 @@ export default function VehiclesScreen({ navigation }: any) {
     );
   };
 
+  const handleSetPrimary = async (vehicleId: string) => {
+    try {
+      const response = await apiClient(`/vehicles/${vehicleId}/set-primary`, { method: 'PATCH' });
+      if (response.ok) {
+        Toast.show({
+          type: 'success',
+          text1: 'Başarılı',
+          text2: 'Varsayılan araç güncellendi.'
+        });
+        fetchMyVehicles();
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Hata',
+          text2: 'İşlem başarısız oldu.'
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      Toast.show({ type: 'error', text1: 'Bağlantı Hatası', text2: 'Sunucuya ulaşılamadı.' });
+    }
+  };
+
   const renderVehicleItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
       style={styles.vehicleCard}
@@ -111,14 +139,21 @@ export default function VehiclesScreen({ navigation }: any) {
           <Text style={styles.vehicleBrand}>{item.brand}</Text>
           <Text style={styles.vehicleModel}>{item.model}</Text>
         </View>
-        {item.is_primary && (
+        {item.is_primary ? (
           <View style={styles.primaryBadge}>
             <MaterialIcons name="star" size={14} color={COLORS.background} />
             <Text style={styles.primaryText}>Varsayılan</Text>
           </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.actionIconButton}
+            onPress={() => handleSetPrimary(item.id)}
+          >
+            <MaterialIcons name="star-border" size={24} color={COLORS.onSurfaceVariant} />
+          </TouchableOpacity>
         )}
         <TouchableOpacity
-          style={styles.deleteButton}
+          style={styles.actionIconButton}
           onPress={() => handleDeleteVehicle(item.id)}
         >
           <MaterialIcons name="delete-outline" size={24} color={COLORS.error} />
@@ -276,11 +311,11 @@ const styles = StyleSheet.create({
     color: COLORS.background,
     fontSize: 10,
     fontWeight: '700',
-    marginLeft: 2,
+    marginLeft: 8,
   },
-  deleteButton: {
-    marginLeft: 12,
-    padding: 4,
+  actionIconButton: {
+    padding: 8,
+    marginLeft: 4,
   },
   vehicleDetails: {
     flexDirection: 'row',

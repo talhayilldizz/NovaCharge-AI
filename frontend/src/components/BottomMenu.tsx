@@ -52,10 +52,10 @@ export default function BottomMenu({ navigation, activeTab }: BottomMenuProps) {
 
       {/* Rota (Center, Larger) */}
       <View style={styles.centerTabContainer}>
-        <TouchableOpacity style={styles.centerTab} onPress={() => handlePress('Rota')}>
+        <TouchableOpacity style={styles.centerTab} onPress={() => handlePress('Rota', 'RoutePlanner')}>
           <MaterialCommunityIcons name="map-marker-path" size={32} color="#000" />
         </TouchableOpacity>
-        <Text style={[styles.tabText, styles.centerTabText]}>Rota</Text>
+        <Text style={[styles.tabText, styles.centerTabText, activeTab === 'Route' && styles.activeTabText]}>Rota</Text>
       </View>
 
       {/* Araçlar (Vehicles) */}
@@ -69,7 +69,7 @@ export default function BottomMenu({ navigation, activeTab }: BottomMenuProps) {
       </TouchableOpacity>
 
       {/* Profil (Profile) */}
-      <TouchableOpacity style={styles.tab} onPress={() => handlePress('Profil')}>
+      <TouchableOpacity style={styles.tab} onPress={() => handlePress('Profil', 'Profile')}>
         <Ionicons 
           name={activeTab === 'Profile' ? "person" : "person-outline"} 
           size={24} 
