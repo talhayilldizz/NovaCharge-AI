@@ -14,16 +14,11 @@ class RouteCreate(BaseModel):
     total_distance_km: Optional[float] = None
     total_duration_mins: Optional[float] = None
 
-    estimated_total_cost: Optional[float] = None
-    ai_plan: Optional[dict] = None
-
 class RouteResponse(BaseModel):
     id: UUID
     user_id: UUID
     vehicle_id: Optional[UUID]
     total_distance_km: Optional[float]
     total_duration_mins: Optional[float]
-    estimated_total_cost: Optional[float]
-    ai_plan: Optional[dict]
     created_at: datetime
     model_config = {"from_attributes": True}

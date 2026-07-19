@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   StyleSheet,
   Text,
@@ -31,9 +32,9 @@ const COLORS = {
 
 const ACTION_BUTTONS = [
   { id: 'map', icon: 'map', label: 'Harita', screen: 'Map' },
-  { id: 'route', icon: 'alt-route', label: 'Akıllı Rota', screen: 'SmartRoute' },
-  { id: 'favorites', icon: 'star-outline', label: 'Favoriler', screen: 'Favorites' },
-  { id: 'garage', icon: 'directions-car', label: 'Garaj', screen: 'Garage' },
+  { id: 'list', icon: 'list', label: 'İstasyonlar', screen: 'StationList' },
+  { id: 'favorites', icon: 'star-outline', label: 'Favoriler', screen: 'StationList', params: { initialShowFavorites: true } },
+  { id: 'garage', icon: 'directions-car', label: 'Garaj', screen: 'Vehicles' },
 ];
 
 export default function HomeScreen({ navigation }: any) {
@@ -83,34 +84,6 @@ export default function HomeScreen({ navigation }: any) {
           });
           setUserName('Şarj Sever');
         }
-
-        const favResponse = await apiClient('/favorites/me', { method: 'GET' });
-
-        if (favResponse.ok) {
-          const favData = await favResponse.json();
-          setFavorites(favData)
-        }
-
-
-
-        const vehicleResponse = await apiClient('/vehicles', { method: 'GET' });
-
-        if (vehicleResponse.ok) {
-          const vehicleData = await vehicleResponse.json();
-
-          let primaryVehicle;
-
-          for (let i = 0; i < vehicleData.length; i++) {
-            if (vehicleData[i].is_primary === true) {
-              primaryVehicle = vehicleData[i];
-              break;
-            }
-          }
-
-          setVehicle(primaryVehicle);
-        }
-
-
       } catch (error: any) {
         console.error("API Bağlantı Hatası:", error);
         Toast.show({
@@ -126,6 +99,32 @@ export default function HomeScreen({ navigation }: any) {
 
     fetchUserData();
   }, []);
+
+  // Ekran her odaklandığında (örneğin Listeden dönünce) favorileri ve aracı yenile
+  useFocusEffect(
+    useCallback(() => {
+      const fetchFavoritesAndVehicles = async () => {
+        try {
+          const favResponse = await apiClient('/favorites/me', { method: 'GET' });
+          if (favResponse.ok) {
+            const favData = await favResponse.json();
+            setFavorites(favData);
+          }
+
+          const vehicleResponse = await apiClient('/vehicles', { method: 'GET' });
+          if (vehicleResponse.ok) {
+            const vehicleData = await vehicleResponse.json();
+            const primaryVehicle = vehicleData.find((v: any) => v.is_primary === true);
+            setVehicle(primaryVehicle || null);
+          }
+        } catch (error) {
+          console.error("Favori/Araç çekme hatası:", error);
+        }
+      };
+
+      fetchFavoritesAndVehicles();
+    }, [])
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -205,34 +204,50 @@ export default function HomeScreen({ navigation }: any) {
 
         {/* Quick Actions */}
         <Animated.View style={[styles.actionsGrid, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          {ACTION_BUTTONS.map((action, index) => (
+          {ACTION_BUTTONS.map((btn, index) => (
             <TouchableOpacity
-              key={action.id}
+              key={btn.id}
               style={styles.actionButton}
-              activeOpacity={0.7}
-              onPress={() => action.screen && navigation.navigate(action.screen)}
+              activeOpacity={0.8}
+              onPress={() => {
+                if (btn.params) {
+                  navigation.navigate(btn.screen, btn.params);
+                } else {
+                  navigation.navigate(btn.screen);
+                }
+              }}
             >
               <View style={styles.actionIconWrapper}>
-                <MaterialIcons name={action.icon as any} size={28} color={COLORS.primary} />
+                <MaterialIcons name={btn.icon as any} size={28} color={COLORS.primary} />
               </View>
-              <Text style={styles.actionLabel}>{action.label}</Text>
+              <Text style={styles.actionLabel}>{btn.label}</Text>
             </TouchableOpacity>
           ))}
         </Animated.View>
 
-        {/* Smart Insights (AI) */}
+        {/* Routes Preview */}
         <Animated.View style={[styles.section, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <Text style={styles.sectionTitle}>Akıllı Öneriler</Text>
-          <View style={styles.insightCard}>
-            <View style={styles.insightIconWrapper}>
-              <MaterialIcons name="auto-awesome" size={24} color={COLORS.primary} />
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Son Rotalar</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('RoutePlanner')}>
+              <Text style={styles.seeAllText}>Tümü</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <TouchableOpacity 
+            style={[styles.insightCard, { paddingVertical: 16 }]}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('RoutePlanner')}
+          >
+            <View style={[styles.insightIconWrapper, { backgroundColor: 'rgba(0, 227, 139, 0.15)' }]}>
+              <MaterialIcons name="alt-route" size={24} color={COLORS.primary} />
             </View>
             <View style={styles.insightContent}>
-              <Text style={styles.insightText}>
-                Yarınki İzmir seyahatiniz için mevcut şarjınız yetersiz olabilir. Gece şarja takmanız önerilir.
-              </Text>
+              <Text style={[styles.insightText, { fontWeight: '700', marginBottom: 4, color: COLORS.onSurface }]}>İstanbul → İzmir</Text>
+              <Text style={{ color: COLORS.onSurfaceVariant, fontSize: 13 }}>3 Şarj Noktası • 5s 45dk • 480km</Text>
             </View>
-          </View>
+            <MaterialIcons name="chevron-right" size={24} color={COLORS.onSurfaceVariant} />
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Favorite Stations Preview */}

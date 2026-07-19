@@ -6,6 +6,10 @@ import {
   TouchableOpacity,
   StatusBar,
   Dimensions,
+  TextInput,
+  Keyboard,
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -21,6 +25,7 @@ const COLORS = {
   primary: '#00e38b',
   onSurface: '#e6e1e5',
   onSurfaceVariant: '#b9cbbc',
+  surfaceVariant: '#353437',
 };
 
 // Dinamik HTML oluşturan fonksiyon
@@ -38,19 +43,20 @@ const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObje
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <style>
-        body { padding: 0; margin: 0; background-color: #131315; }
-        #map { height: 100vh; width: 100vw; }
+        body { margin: 0; padding: 0; background-color: #131315; }
+        #map { width: 100vw; height: 100vh; }
         
+        .leaflet-tile-pane {
+            /* Google Haritalar Karanlık Mod efekti */
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+
         .leaflet-bar a { background-color: #1c1b1d !important; color: #00e38b !important; border-bottom: 1px solid #353437 !important; border-radius: 8px !important; margin-bottom: 4px; }
         .leaflet-control-zoom { border: none !important; margin-right: 16px !important; margin-bottom: 32px !important; }
         .leaflet-control-attribution { background: rgba(28, 27, 29, 0.7) !important; color: #b9cbbc !important; border-radius: 4px; }
         .leaflet-control-attribution a { color: #00e38b !important; }
         
         /* Marker Styling */
-        .leaflet-tile-pane {
-            /* Yumuşak koyu tema (Ne zifiri karanlık, ne bembeyaz) */
-            filter: invert(85%) hue-rotate(180deg) brightness(95%) contrast(90%);
-        }
         
         .custom-marker {
             background-color: #00e38b;
@@ -188,10 +194,10 @@ const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObje
         // Sağ alta zoom kontrolünü ekliyoruz
         L.control.zoom({ position: 'bottomright' }).addTo(map);
         
-        // Yumuşak Koyu Tema (CSS Filtresi ile)
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
+        // Google Maps (Standart Görünüm) + CSS Dark Mode
+        L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains:['mt0','mt1','mt2','mt3']
         }).addTo(map);
 
         var routeData = ${routeData ? JSON.stringify(routeData) : 'null'};
@@ -289,12 +295,16 @@ const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObje
 import Toast from 'react-native-toast-message';
 
 export default function MapScreen({ route, navigation }: any) {
-  const [stations, setStations] = useState<any[]>([]);
-  const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
+  const [allStations, setAllStations] = useState<any[]>([]);
+  const [filteredStations, setFilteredStations] = useState<any[]>([]);
+  const [userLocation, setUserLocation] = useState<any>(null);
+  
+  // Rota Modu Parametreleri
+  const routeConfig = route.params?.routeConfig;
   const [routeData, setRouteData] = useState<any>(null);
 
-  // RoutePlanner'dan gelen parametreler var mı?
-  const routeConfig = route?.params?.routeConfig;
+  // Search State
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     // 1. Kullanıcıdan konum izni iste ve konumu al (Emülatör Korumalı)
@@ -336,7 +346,8 @@ export default function MapScreen({ route, navigation }: any) {
         const res = await apiClient('/stations/?limit=2000', { method: 'GET' });
         if (res.ok) {
           const data = await res.json();
-          setStations(data);
+          setAllStations(data);
+          setFilteredStations(data);
         }
       } catch (err) {
         console.error("İstasyonlar çekilemedi", err);
@@ -370,9 +381,25 @@ export default function MapScreen({ route, navigation }: any) {
     fetchOSRMRoute();
   }, [routeConfig]);
 
+  // Arama Efekti
+  useEffect(() => {
+    let result = allStations;
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(s => 
+        (s.name && s.name.toLowerCase().includes(q)) || 
+        (s.address && s.address.toLowerCase().includes(q)) ||
+        (s.provider && s.provider.toLowerCase().includes(q))
+      );
+    }
+
+    setFilteredStations(result);
+  }, [searchQuery, allStations]);
+
   const htmlSource = useMemo(() => {
-    return { html: generateLeafletHTML(stations, userLocation, routeData) };
-  }, [stations, userLocation, routeData]);
+    return { html: generateLeafletHTML(filteredStations, userLocation, routeData) };
+  }, [filteredStations, userLocation, routeData]);
 
   // Rotayı Veritabanına Kaydet
   const handleSaveRoute = async () => {
@@ -425,7 +452,7 @@ export default function MapScreen({ route, navigation }: any) {
       {/* Rota Onaylama Kartı (Sadece Rota Çizildiyse Görünür) */}
       {routeConfig && routeData && (
         <SafeAreaView style={styles.routeConfirmOverlay} edges={['bottom']}>
-          <View style={styles.routeConfirmCard}>
+          <ScrollView bounces={false} style={styles.routeConfirmCard} contentContainerStyle={{ paddingBottom: 20 }}>
             <View style={styles.routeInfoRow}>
               <View>
                 <Text style={styles.routeInfoLabel}>Toplam Mesafe</Text>
@@ -441,7 +468,7 @@ export default function MapScreen({ route, navigation }: any) {
               <Text style={styles.confirmButtonText}>Rotayı Onayla ve Kaydet</Text>
               <MaterialIcons name="check-circle" size={20} color={COLORS.background} />
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </SafeAreaView>
       )}
 
@@ -458,22 +485,27 @@ export default function MapScreen({ route, navigation }: any) {
 
           {!routeConfig && (
             <>
-              <View style={styles.searchBar}>
+              <View style={[styles.searchBar, { paddingHorizontal: 12 }]}>
                 <MaterialIcons name="search" size={20} color={COLORS.onSurfaceVariant} />
-                <Text style={styles.searchText}>İstasyon ara...</Text>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="İstasyon ara..."
+                  placeholderTextColor={COLORS.onSurfaceVariant}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  returnKeyType="search"
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+                    <MaterialIcons name="close" size={20} color={COLORS.onSurfaceVariant} />
+                  </TouchableOpacity>
+                )}
               </View>
-
-              <TouchableOpacity 
-                style={styles.iconButton} 
-                activeOpacity={0.8}
-              >
-                <MaterialIcons name="filter-list" size={24} color={COLORS.onSurface} />
-              </TouchableOpacity>
             </>
           )}
         </View>
       </SafeAreaView>
-
     </View>
   );
 }
@@ -525,9 +557,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  searchText: {
-    color: COLORS.onSurfaceVariant,
+  searchInput: {
+    flex: 1,
+    color: COLORS.onSurface,
     fontSize: 15,
+    paddingVertical: 8,
   },
   routeConfirmOverlay: {
     position: 'absolute',
@@ -573,9 +607,5 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     gap: 8,
   },
-  confirmButtonText: {
-    color: COLORS.background,
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  confirmButtonText: { fontSize: 16, fontWeight: '700', color: COLORS.background },
 });
