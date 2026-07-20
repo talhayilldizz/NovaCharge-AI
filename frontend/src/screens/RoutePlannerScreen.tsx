@@ -33,6 +33,7 @@ const COLORS = {
 export default function RoutePlannerScreen({ navigation }: any) {
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [batteryPercentage, setBatteryPercentage] = useState('100');
   const [isLoading, setIsLoading] = useState(true);
 
   // Başlangıç konumu (GPS)
@@ -137,6 +138,8 @@ export default function RoutePlannerScreen({ navigation }: any) {
       return;
     }
 
+    const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
+
     // Map sayfasına rota parametrelerini gönder
     navigation.navigate('Map', {
       routeConfig: {
@@ -144,7 +147,11 @@ export default function RoutePlannerScreen({ navigation }: any) {
         startLon: startLocation.longitude,
         endLat: selectedDestination.lat,
         endLon: selectedDestination.lon,
-        vehicleId: selectedVehicleId
+        vehicleId: selectedVehicleId,
+        vehicleModel: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Bilinmiyor",
+        batteryCapacity: selectedVehicle ? selectedVehicle.battery_capacity : 60,
+        rangeKm: selectedVehicle ? selectedVehicle.range_km : 350,
+        batteryPercentage: parseInt(batteryPercentage) || 100
       }
     });
   };
@@ -257,6 +264,21 @@ export default function RoutePlannerScreen({ navigation }: any) {
                   );
                 })}
               </ScrollView>
+            )}
+
+            {/* Şarj Durumu Girişi */}
+            {vehicles.length > 0 && (
+              <View style={{ marginTop: 24 }}>
+                <Text style={styles.sectionTitle}>Mevcut Şarjınız (%)</Text>
+                <TextInput
+                  style={[styles.textInput, { borderBottomColor: COLORS.surfaceVariant }]}
+                  placeholder="Örn: 80"
+                  placeholderTextColor={COLORS.onSurfaceVariant}
+                  keyboardType="numeric"
+                  value={batteryPercentage}
+                  onChangeText={setBatteryPercentage}
+                />
+              </View>
             )}
           </View>
 

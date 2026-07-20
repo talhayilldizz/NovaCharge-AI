@@ -14,8 +14,8 @@ class AIRouteAnalysisRequest(BaseModel):
     battery_capacity_kwh: Optional[float] = None
     range_km: Optional[int] = None
     current_battery_percentage: Optional[int] = None
-    stations_on_route: List[StationInfo]
-
+    route_coordinates: List[List[float]] # [[lat, lon], [lat, lon], ...]
+    
 class ChargingStop(BaseModel):
     station_name: str
     charging_time_mins: int

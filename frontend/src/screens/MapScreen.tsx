@@ -298,13 +298,17 @@ export default function MapScreen({ route, navigation }: any) {
   const [allStations, setAllStations] = useState<any[]>([]);
   const [filteredStations, setFilteredStations] = useState<any[]>([]);
   const [userLocation, setUserLocation] = useState<any>(null);
-  
+
   // Rota Modu Parametreleri
   const routeConfig = route.params?.routeConfig;
   const [routeData, setRouteData] = useState<any>(null);
 
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
+
+  //AI State
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     // 1. Kullanıcıdan konum izni iste ve konumu al (Emülatör Korumalı)
@@ -333,7 +337,7 @@ export default function MapScreen({ route, navigation }: any) {
             }
           };
         }
-        
+
         setUserLocation(location as any);
       } catch (err) {
         console.error("Konum izni alınırken hata:", err);
@@ -387,8 +391,8 @@ export default function MapScreen({ route, navigation }: any) {
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(s => 
-        (s.name && s.name.toLowerCase().includes(q)) || 
+      result = result.filter(s =>
+        (s.name && s.name.toLowerCase().includes(q)) ||
         (s.address && s.address.toLowerCase().includes(q)) ||
         (s.provider && s.provider.toLowerCase().includes(q))
       );
@@ -401,10 +405,59 @@ export default function MapScreen({ route, navigation }: any) {
     return { html: generateLeafletHTML(filteredStations, userLocation, routeData) };
   }, [filteredStations, userLocation, routeData]);
 
+
+
+
+  const handleAIAnalysis = async () => {
+    if (!routeConfig || !routeData) return;
+    setIsAnalyzing(true);
+
+    const padding = 0.5; //yaklaşık 50 km hata payı
+    const minLat = Math.min(routeConfig.startLat, routeConfig.endLat) - padding;
+    const maxLat = Math.max(routeConfig.startLat, routeConfig.endLat) + padding;
+    const minLon = Math.min(routeConfig.startLon, routeConfig.endLon) - padding;
+    const maxLon = Math.max(routeConfig.startLon, routeConfig.endLon) + padding;
+
+    const nearbyStations = allStations.filter(s =>
+      s.latitude >= minLat && s.latitude <= maxLat &&
+      s.longitude >= minLon && s.longitude <= maxLon
+    ).slice(0, 40);
+
+    try {
+      const payload = {
+        start_point: `${routeConfig.startLat}, ${routeConfig.startLon}`,
+        end_point: `${routeConfig.endLat}, ${routeConfig.endLon}`,
+        total_distance_km: parseFloat((routeData.distance / 1000).toFixed(2)),
+        total_duration_mins: parseFloat((routeData.duration / 60).toFixed(2)),
+        current_battery_percentage: routeConfig.batteryPercentage || 100,
+        vehicle_model: routeConfig.vehicleModel || "Bilinmiyor",
+        battery_capacity_kwh: routeConfig.batteryCapacity || 60,
+        range_km: routeConfig.rangeKm || 350,
+        route_coordinates: routeData.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]])
+      };
+
+      const res = await apiClient('/routes/ai-analysis', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAiAnalysis(data);
+      } else {
+        Toast.show({ type: 'error', text1: 'AI Hatası', text2: 'Analiz yapılamadı.' });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   // Rotayı Veritabanına Kaydet
   const handleSaveRoute = async () => {
     if (!routeConfig || !routeData) return;
-    
+
     try {
       const payload = {
         vehicle_id: routeConfig.vehicleId,
@@ -413,7 +466,9 @@ export default function MapScreen({ route, navigation }: any) {
         end_lat: routeConfig.endLat,
         end_lon: routeConfig.endLon,
         total_distance_km: parseFloat((routeData.distance / 1000).toFixed(2)),
-        total_duration_mins: parseFloat((routeData.duration / 60).toFixed(2))
+        total_duration_mins: parseFloat((routeData.duration / 60).toFixed(2)),
+        estimated_total_cost: aiAnalysis?.total_cost || null,
+        ai_plan: aiAnalysis || null
       };
 
       const res = await apiClient('/routes/', {
@@ -463,7 +518,67 @@ export default function MapScreen({ route, navigation }: any) {
                 <Text style={styles.routeInfoValue}>{Math.round(routeData.duration / 60)} dk</Text>
               </View>
             </View>
-            
+
+            {/* Yapay Zeka Raporu ve Butonu */}
+            {aiAnalysis ? (
+              <View style={{
+                backgroundColor: 'rgba(0, 227, 139, 0.1)',
+                padding: 16,
+                borderRadius: 16,
+                marginBottom: 20,
+                borderWidth: 1,
+                borderColor: COLORS.primary
+              }}>
+                <Text style={{ color: COLORS.primary, fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>
+                  ✨ VoltPilot AI Analizi
+                </Text>
+                
+                <Text style={{ color: COLORS.onSurface, marginBottom: 8 }}>
+                  <Text style={{ fontWeight: 'bold' }}>Tahmini Şarj Masrafı:</Text> {aiAnalysis.total_cost} TL
+                </Text>
+                <Text style={{ color: COLORS.onSurface, marginBottom: 16 }}>
+                  <Text style={{ fontWeight: 'bold' }}>Şarjda Geçecek Süre:</Text> {aiAnalysis.total_time_lost} dk
+                </Text>
+
+                <Text style={{ color: COLORS.onSurface, fontWeight: 'bold', marginBottom: 8 }}>📍 Mola Planı:</Text>
+                {aiAnalysis.charging_stops && aiAnalysis.charging_stops.map((stop: any, index: number) => (
+                  <View key={index} style={{ marginBottom: 8, paddingLeft: 8, borderLeftWidth: 2, borderColor: COLORS.primary }}>
+                    <Text style={{ color: COLORS.onSurface }}>{stop.station_name}</Text>
+                    <Text style={{ color: COLORS.onSurfaceVariant, fontSize: 13 }}>
+                      {stop.charging_time_mins} dk • {stop.estimated_cost_try} TL
+                    </Text>
+                  </View>
+                ))}
+
+                <Text style={{ color: COLORS.onSurface, fontWeight: 'bold', marginTop: 12, marginBottom: 4 }}>💡 Tavsiyeler:</Text>
+                {aiAnalysis.general_recommendations && aiAnalysis.general_recommendations.map((rec: string, idx: number) => (
+                  <Text key={idx} style={{ color: COLORS.onSurfaceVariant, fontSize: 13, marginBottom: 4 }}>
+                    • {rec}
+                  </Text>
+                ))}
+              </View>
+            ) : (
+              <TouchableOpacity 
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  paddingVertical: 14,
+                  borderRadius: 16,
+                  alignItems: 'center',
+                  marginBottom: 20,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.2)'
+                }} 
+                onPress={handleAIAnalysis}
+                disabled={isAnalyzing}
+              >
+                {isAnalyzing ? (
+                  <ActivityIndicator color={COLORS.primary} />
+                ) : (
+                  <Text style={{ color: COLORS.onSurface, fontWeight: 'bold' }}>✨ Yapay Zeka ile Analiz Et</Text>
+                )}
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity style={styles.confirmButton} onPress={handleSaveRoute} activeOpacity={0.8}>
               <Text style={styles.confirmButtonText}>Rotayı Onayla ve Kaydet</Text>
               <MaterialIcons name="check-circle" size={20} color={COLORS.background} />
@@ -475,8 +590,8 @@ export default function MapScreen({ route, navigation }: any) {
       {/* Header Overlay (Sadece rota modunda değilse search bar göster, rota modunda sadece geri dön tuşu) */}
       <SafeAreaView style={styles.headerOverlay} edges={['top']}>
         <View style={styles.headerRow}>
-          <TouchableOpacity 
-            style={styles.iconButton} 
+          <TouchableOpacity
+            style={styles.iconButton}
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
