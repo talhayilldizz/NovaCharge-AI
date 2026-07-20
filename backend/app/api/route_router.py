@@ -3,11 +3,14 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
+
 from app.database.session import get_db
 from app.schemas.route_schema import RouteCreate, RouteResponse
 from app.services import route_service, vehicle_service
 from app.api.deps import get_current_user
 from app.models.user import User
+from app.schemas.ai_schema import AIRouteAnalysisResponse, AIRouteAnalysisRequest
+from app.services.ai_service import analyze_route_with_ai
 
 router = APIRouter(
     prefix="/routes",
@@ -78,3 +81,13 @@ def delete_route(
         
     route_service.delete_route(db=db, db_route=db_route)
     return {"message": "Rota başarıyla silindi"}
+
+@router.post("/ai-analysis", response_model=AIRouteAnalysisResponse)
+def get_ai_route_analysis(
+    request:AIRouteAnalysisRequest
+):
+    try:
+        return analyze_route_with_ai(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

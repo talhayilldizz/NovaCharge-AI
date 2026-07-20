@@ -4,3 +4,4 @@ from app.models.station import Station
 from app.models.route import Route
 from app.models.favorite_station import FavoriteStation
 from app.models.vehicle_catalog import VehicleCatalog
+from app.models.operator_tariff import OperatorTariff

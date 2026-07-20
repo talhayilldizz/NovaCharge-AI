@@ -1,3 +1,4 @@
+from sqlalchemy.dialects.postgresql import JSONB
 import uuid
 from sqlalchemy import Column, Float, ForeignKey, DateTime, Uuid
 from sqlalchemy.sql import func
@@ -17,5 +18,8 @@ class Route(Base):
     
     total_distance_km = Column(Float)
     total_duration_mins = Column(Float)
+
+    estimated_total_cost = Column(Float, nullable=True)
+    ai_plan = Column(JSONB, nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
