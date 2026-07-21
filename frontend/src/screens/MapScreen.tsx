@@ -306,9 +306,10 @@ export default function MapScreen({ route, navigation }: any) {
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
 
-  //AI State
+  // AI State
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
 
   useEffect(() => {
     // 1. Kullanıcıdan konum izni iste ve konumu al (Emülatör Korumalı)
@@ -408,49 +409,45 @@ export default function MapScreen({ route, navigation }: any) {
 
 
 
-  const handleAIAnalysis = async () => {
-    if (!routeConfig || !routeData) return;
-    setIsAnalyzing(true);
 
-    const padding = 0.5; //yaklaşık 50 km hata payı
-    const minLat = Math.min(routeConfig.startLat, routeConfig.endLat) - padding;
-    const maxLat = Math.max(routeConfig.startLat, routeConfig.endLat) + padding;
-    const minLon = Math.min(routeConfig.startLon, routeConfig.endLon) - padding;
-    const maxLon = Math.max(routeConfig.startLon, routeConfig.endLon) + padding;
-
-    const nearbyStations = allStations.filter(s =>
-      s.latitude >= minLat && s.latitude <= maxLat &&
-      s.longitude >= minLon && s.longitude <= maxLon
-    ).slice(0, 40);
-
+  // AI Analizi İsteği
+  const handleAiAnalysis = async () => {
+    if (!routeData || !routeData.geometry) return;
+    setIsAiLoading(true);
     try {
+      // OSRM [boylam, enlem] dönüyor, biz backend'e [enlem, boylam] yollamalıyız
+      const routeCoords = routeData.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
+
       const payload = {
-        start_point: `${routeConfig.startLat}, ${routeConfig.startLon}`,
-        end_point: `${routeConfig.endLat}, ${routeConfig.endLon}`,
+        start_point: "Başlangıç",
+        end_point: "Varış Noktası",
         total_distance_km: parseFloat((routeData.distance / 1000).toFixed(2)),
         total_duration_mins: parseFloat((routeData.duration / 60).toFixed(2)),
-        current_battery_percentage: routeConfig.batteryPercentage || 100,
         vehicle_model: routeConfig.vehicleModel || "Bilinmiyor",
         battery_capacity_kwh: routeConfig.batteryCapacity || 60,
         range_km: routeConfig.rangeKm || 350,
-        route_coordinates: routeData.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]])
+        current_battery_percentage: routeConfig.batteryPercentage || 100,
+        route_coordinates: routeCoords
       };
 
       const res = await apiClient('/routes/ai-analysis', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
-
+      
       if (res.ok) {
         const data = await res.json();
         setAiAnalysis(data);
+        setShowAiModal(true);
       } else {
-        Toast.show({ type: 'error', text1: 'AI Hatası', text2: 'Analiz yapılamadı.' });
+        const errorData = await res.json();
+        Toast.show({ type: 'error', text1: 'AI Hatası', text2: errorData.detail || 'Bilinmeyen Hata' });
       }
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
+      Toast.show({ type: 'error', text1: 'Hata', text2: 'Yapay Zeka servisine ulaşılamadı.' });
     } finally {
-      setIsAnalyzing(false);
+      setIsAiLoading(false);
     }
   };
 
@@ -466,9 +463,7 @@ export default function MapScreen({ route, navigation }: any) {
         end_lat: routeConfig.endLat,
         end_lon: routeConfig.endLon,
         total_distance_km: parseFloat((routeData.distance / 1000).toFixed(2)),
-        total_duration_mins: parseFloat((routeData.duration / 60).toFixed(2)),
-        estimated_total_cost: aiAnalysis?.total_cost || null,
-        ai_plan: aiAnalysis || null
+        total_duration_mins: parseFloat((routeData.duration / 60).toFixed(2))
       };
 
       const res = await apiClient('/routes/', {
@@ -504,6 +499,21 @@ export default function MapScreen({ route, navigation }: any) {
         bounces={false}
       />
 
+      {/* AI Analiz Butonu (Rota çizildiğinde görünür) */}
+      {routeConfig && routeData && (
+        <TouchableOpacity
+          style={styles.aiButton}
+          onPress={handleAiAnalysis}
+          disabled={isAiLoading}
+        >
+          {isAiLoading ? (
+            <ActivityIndicator color={COLORS.background} />
+          ) : (
+            <Text style={styles.aiButtonText}>✨ AI Analizi</Text>
+          )}
+        </TouchableOpacity>
+      )}
+
       {/* Rota Onaylama Kartı (Sadece Rota Çizildiyse Görünür) */}
       {routeConfig && routeData && (
         <SafeAreaView style={styles.routeConfirmOverlay} edges={['bottom']}>
@@ -519,65 +529,6 @@ export default function MapScreen({ route, navigation }: any) {
               </View>
             </View>
 
-            {/* Yapay Zeka Raporu ve Butonu */}
-            {aiAnalysis ? (
-              <View style={{
-                backgroundColor: 'rgba(0, 227, 139, 0.1)',
-                padding: 16,
-                borderRadius: 16,
-                marginBottom: 20,
-                borderWidth: 1,
-                borderColor: COLORS.primary
-              }}>
-                <Text style={{ color: COLORS.primary, fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>
-                  ✨ VoltPilot AI Analizi
-                </Text>
-                
-                <Text style={{ color: COLORS.onSurface, marginBottom: 8 }}>
-                  <Text style={{ fontWeight: 'bold' }}>Tahmini Şarj Masrafı:</Text> {aiAnalysis.total_cost} TL
-                </Text>
-                <Text style={{ color: COLORS.onSurface, marginBottom: 16 }}>
-                  <Text style={{ fontWeight: 'bold' }}>Şarjda Geçecek Süre:</Text> {aiAnalysis.total_time_lost} dk
-                </Text>
-
-                <Text style={{ color: COLORS.onSurface, fontWeight: 'bold', marginBottom: 8 }}>📍 Mola Planı:</Text>
-                {aiAnalysis.charging_stops && aiAnalysis.charging_stops.map((stop: any, index: number) => (
-                  <View key={index} style={{ marginBottom: 8, paddingLeft: 8, borderLeftWidth: 2, borderColor: COLORS.primary }}>
-                    <Text style={{ color: COLORS.onSurface }}>{stop.station_name}</Text>
-                    <Text style={{ color: COLORS.onSurfaceVariant, fontSize: 13 }}>
-                      {stop.charging_time_mins} dk • {stop.estimated_cost_try} TL
-                    </Text>
-                  </View>
-                ))}
-
-                <Text style={{ color: COLORS.onSurface, fontWeight: 'bold', marginTop: 12, marginBottom: 4 }}>💡 Tavsiyeler:</Text>
-                {aiAnalysis.general_recommendations && aiAnalysis.general_recommendations.map((rec: string, idx: number) => (
-                  <Text key={idx} style={{ color: COLORS.onSurfaceVariant, fontSize: 13, marginBottom: 4 }}>
-                    • {rec}
-                  </Text>
-                ))}
-              </View>
-            ) : (
-              <TouchableOpacity 
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  paddingVertical: 14,
-                  borderRadius: 16,
-                  alignItems: 'center',
-                  marginBottom: 20,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.2)'
-                }} 
-                onPress={handleAIAnalysis}
-                disabled={isAnalyzing}
-              >
-                {isAnalyzing ? (
-                  <ActivityIndicator color={COLORS.primary} />
-                ) : (
-                  <Text style={{ color: COLORS.onSurface, fontWeight: 'bold' }}>✨ Yapay Zeka ile Analiz Et</Text>
-                )}
-              </TouchableOpacity>
-            )}
 
             <TouchableOpacity style={styles.confirmButton} onPress={handleSaveRoute} activeOpacity={0.8}>
               <Text style={styles.confirmButtonText}>Rotayı Onayla ve Kaydet</Text>
@@ -621,6 +572,70 @@ export default function MapScreen({ route, navigation }: any) {
           )}
         </View>
       </SafeAreaView>
+
+      {/* AI Analiz Modalı */}
+      {showAiModal && aiAnalysis && (
+        <View style={styles.aiModalOverlay}>
+          <View style={styles.aiModalContent}>
+            <View style={styles.aiModalHeader}>
+              <Text style={styles.aiModalTitle}>✨ Yapay Zeka Rota Analizi</Text>
+              <TouchableOpacity onPress={() => setShowAiModal(false)}>
+                <MaterialIcons name="close" size={24} color={COLORS.onSurface} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ marginTop: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+              {/* Genel Öneriler */}
+              <View style={styles.aiRecBox}>
+                <MaterialIcons name="info-outline" size={20} color={COLORS.primary} />
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  {aiAnalysis.general_recommendations.map((rec: string, idx: number) => (
+                    <Text key={idx} style={styles.aiRecText}>• {rec}</Text>
+                  ))}
+                </View>
+              </View>
+
+              {/* Mola Noktaları */}
+              <Text style={styles.aiSectionTitle}>Mola Noktaları</Text>
+              {aiAnalysis.charging_stops.length === 0 ? (
+                <Text style={styles.aiNoStopText}>Şarj molasına gerek yok!</Text>
+              ) : (
+                aiAnalysis.charging_stops.map((stop: any, index: number) => (
+                  <View key={index} style={styles.aiStopCard}>
+                    <View style={styles.aiStopHeader}>
+                      <View style={styles.aiStopBadge}>
+                        <Text style={styles.aiStopBadgeText}>{index + 1}. Mola</Text>
+                      </View>
+                      <Text style={styles.aiStopName}>{stop.station_name}</Text>
+                    </View>
+                    
+                    <View style={styles.aiStopDetails}>
+                      <View style={styles.aiDetailItem}>
+                        <MaterialIcons name="schedule" size={16} color={COLORS.onSurfaceVariant} />
+                        <Text style={styles.aiDetailText}>~{stop.charging_time_mins} Dk</Text>
+                      </View>
+                      <View style={styles.aiDetailItem}>
+                        <MaterialIcons name="payments" size={16} color={COLORS.onSurfaceVariant} />
+                        <Text style={styles.aiDetailText}>~{stop.estimated_cost_try} ₺</Text>
+                      </View>
+                    </View>
+                    
+                    <Text style={styles.aiStopReason}>"{stop.reason}"</Text>
+                  </View>
+                ))
+              )}
+
+              {/* Toplam Maliyet Özeti */}
+              {aiAnalysis.charging_stops.length > 0 && (
+                <View style={styles.aiSummaryCard}>
+                  <Text style={styles.aiSummaryTitle}>Tahmini Toplam Maliyet</Text>
+                  <Text style={styles.aiSummaryValue}>{aiAnalysis.total_cost} ₺</Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -723,4 +738,147 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   confirmButtonText: { fontSize: 16, fontWeight: '700', color: COLORS.background },
+  aiButton: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 10,
+  },
+  aiButtonText: {
+    color: COLORS.background,
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  aiModalOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+    zIndex: 999
+  },
+  aiModalContent: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    height: '80%',
+  },
+  aiModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceVariant,
+    paddingBottom: 16,
+  },
+  aiModalTitle: {
+    color: COLORS.primary,
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  aiRecBox: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0, 227, 139, 0.1)',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  aiRecText: {
+    color: COLORS.onSurface,
+    fontSize: 14,
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  aiSectionTitle: {
+    color: COLORS.onSurface,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  aiNoStopText: {
+    color: COLORS.onSurfaceVariant,
+    fontStyle: 'italic',
+    marginBottom: 16,
+  },
+  aiStopCard: {
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceVariant,
+  },
+  aiStopHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  aiStopBadge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  aiStopBadgeText: {
+    color: COLORS.background,
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  aiStopName: {
+    color: COLORS.onSurface,
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  aiStopDetails: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    gap: 16,
+  },
+  aiDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  aiDetailText: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 14,
+  },
+  aiStopReason: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 13,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  aiSummaryCard: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 40,
+  },
+  aiSummaryTitle: {
+    color: COLORS.background,
+    fontSize: 14,
+    opacity: 0.8,
+  },
+  aiSummaryValue: {
+    color: COLORS.background,
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
 });

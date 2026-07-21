@@ -1,10 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
 
-class StationInfo(BaseModel):
-    name: str
-    is_fast_charge: bool
-    
 class AIRouteAnalysisRequest(BaseModel):
     start_point: str
     end_point: str
@@ -14,8 +10,8 @@ class AIRouteAnalysisRequest(BaseModel):
     battery_capacity_kwh: Optional[float] = None
     range_km: Optional[int] = None
     current_battery_percentage: Optional[int] = None
-    route_coordinates: List[List[float]] # [[lat, lon], [lat, lon], ...]
-    
+    route_coordinates: List[List[float]] # [lat, lon] formatındaki rota çizgisi
+
 class ChargingStop(BaseModel):
     station_name: str
     charging_time_mins: int

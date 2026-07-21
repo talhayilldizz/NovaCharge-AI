@@ -12,6 +12,7 @@ from app.models.user import User
 from app.schemas.ai_schema import AIRouteAnalysisResponse, AIRouteAnalysisRequest
 from app.services.ai_service import analyze_route_with_ai
 
+
 router = APIRouter(
     prefix="/routes",
     tags=["Rota İşlemleri"]
@@ -82,12 +83,9 @@ def delete_route(
     route_service.delete_route(db=db, db_route=db_route)
     return {"message": "Rota başarıyla silindi"}
 
+
 @router.post("/ai-analysis", response_model=AIRouteAnalysisResponse)
 def get_ai_route_analysis(
-    request:AIRouteAnalysisRequest
+    request: AIRouteAnalysisRequest
 ):
-    try:
-        return analyze_route_with_ai(request)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+    return analyze_route_with_ai(request)
