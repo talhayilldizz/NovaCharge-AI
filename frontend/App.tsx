@@ -18,6 +18,7 @@ import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
 import MapScreen from './src/screens/MapScreen';
 import RoutePlannerScreen from './src/screens/RoutePlannerScreen';
 import StationListScreen from './src/screens/StationListScreen';
+import SavedRoutesScreen from './src/screens/SavedRoutesScreen';
 
 import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 
@@ -93,6 +94,7 @@ export default function App() {
         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
         <Stack.Screen name="Map" component={MapScreen} />
         <Stack.Screen name="RoutePlanner" component={RoutePlannerScreen} />
+        <Stack.Screen name="SavedRoutes" component={SavedRoutesScreen} />
         <Stack.Screen name="StationList" component={StationListScreen} />
       </Stack.Navigator>
       <Toast config={toastConfig} />

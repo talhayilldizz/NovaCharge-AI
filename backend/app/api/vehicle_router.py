@@ -89,6 +89,13 @@ def delete_vehicle(
             detail="Bu aracı silme yetkiniz yok!"
         )
     
+
+    if db_vehicle.is_primary == True:
+        raise HTTPException(
+            status_code = 403,
+            detail="Birincil araçlar silinmez"
+        )
+
     vehicle_service.delete_vehicle(
         db=db,
         db_vehicle=db_vehicle

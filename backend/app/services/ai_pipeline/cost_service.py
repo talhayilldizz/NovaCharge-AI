@@ -36,6 +36,8 @@ def calculate_time_and_cost(ai_selected_stations: List[dict], missing_energy_kwh
         
         charging_stops.append({
             "station_name": stop["name"],
+            "latitude": stop.get("lat"),
+            "longitude": stop.get("lon"),
             "charging_time_mins": charging_time_mins,
             "estimated_cost_try": cost,
             "reason": stop.get("ai_reason", "") 

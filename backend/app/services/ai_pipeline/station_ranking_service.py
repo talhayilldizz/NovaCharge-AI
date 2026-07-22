@@ -27,7 +27,7 @@ def rank_and_select_candidates(
             distance_diff_km = abs(st.get("distance_from_start_km", 0) - ideal_km)
             score -= (distance_diff_km * 1.5)
 
-            if distance_diff_km > 50:
+            if distance_diff_km > 150:  # Gevşetildi: İstasyon sayısı az olan uzun rotalarda en azından istasyon bulabilsin
                 continue
             
             st_copy = st.copy()

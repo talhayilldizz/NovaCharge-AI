@@ -463,7 +463,8 @@ export default function MapScreen({ route, navigation }: any) {
         end_lat: routeConfig.endLat,
         end_lon: routeConfig.endLon,
         total_distance_km: parseFloat((routeData.distance / 1000).toFixed(2)),
-        total_duration_mins: parseFloat((routeData.duration / 60).toFixed(2))
+        total_duration_mins: parseFloat((routeData.duration / 60).toFixed(2)),
+        ai_plan: aiAnalysis
       };
 
       const res = await apiClient('/routes/', {

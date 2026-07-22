@@ -46,6 +46,7 @@ export default function HomeScreen({ navigation }: any) {
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [vehicle, setVehicle] = useState<any>(null);
+  const [recentRoute, setRecentRoute] = useState<any>(null);
 
   useEffect(() => {
     // 1. Animasyonları Başlat
@@ -116,6 +117,17 @@ export default function HomeScreen({ navigation }: any) {
             const vehicleData = await vehicleResponse.json();
             const primaryVehicle = vehicleData.find((v: any) => v.is_primary === true);
             setVehicle(primaryVehicle || null);
+          }
+
+          const routeResponse = await apiClient('/routes/me', { method: 'GET' });
+          if (routeResponse.ok) {
+            const routeData = await routeResponse.json();
+            if (routeData && routeData.length > 0) {
+              const sortedRoutes = routeData.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+              setRecentRoute(sortedRoutes[0]);
+            } else {
+              setRecentRoute(null);
+            }
           }
         } catch (error) {
           console.error("Favori/Araç çekme hatası:", error);
@@ -229,25 +241,35 @@ export default function HomeScreen({ navigation }: any) {
         <Animated.View style={[styles.section, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Son Rotalar</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('RoutePlanner')}>
+            <TouchableOpacity onPress={() => navigation.navigate('SavedRoutes')}>
               <Text style={styles.seeAllText}>Tümü</Text>
             </TouchableOpacity>
           </View>
           
-          <TouchableOpacity 
-            style={[styles.insightCard, { paddingVertical: 16 }]}
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate('RoutePlanner')}
-          >
-            <View style={[styles.insightIconWrapper, { backgroundColor: 'rgba(0, 227, 139, 0.15)' }]}>
-              <MaterialIcons name="alt-route" size={24} color={COLORS.primary} />
-            </View>
-            <View style={styles.insightContent}>
-              <Text style={[styles.insightText, { fontWeight: '700', marginBottom: 4, color: COLORS.onSurface }]}>İstanbul → İzmir</Text>
-              <Text style={{ color: COLORS.onSurfaceVariant, fontSize: 13 }}>3 Şarj Noktası • 5s 45dk • 480km</Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={24} color={COLORS.onSurfaceVariant} />
-          </TouchableOpacity>
+          {recentRoute ? (
+            <TouchableOpacity 
+              style={[styles.insightCard, { paddingVertical: 16 }]}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('SavedRoutes')}
+            >
+              <View style={[styles.insightIconWrapper, { backgroundColor: 'rgba(0, 227, 139, 0.15)' }]}>
+                <MaterialIcons name="alt-route" size={24} color={COLORS.primary} />
+              </View>
+              <View style={styles.insightContent}>
+                <Text style={[styles.insightText, { fontWeight: '700', marginBottom: 4, color: COLORS.onSurface }]}>Kaydedilen Rota</Text>
+                <Text style={{ color: COLORS.onSurfaceVariant, fontSize: 13 }}>{recentRoute.total_distance_km ? `${recentRoute.total_distance_km} km` : 'Bilinmiyor'} • {recentRoute.total_duration_mins ? `${Math.round(recentRoute.total_duration_mins)} dk` : 'Bilinmiyor'}</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={COLORS.onSurfaceVariant} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.insightCard, { paddingVertical: 16, justifyContent: 'center' }]}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('RoutePlanner')}
+            >
+              <Text style={{ color: COLORS.onSurfaceVariant, textAlign: 'center' }}>Henüz rota kaydetmedin. Planlamak için tıkla.</Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
 
         {/* Favorite Stations Preview */}

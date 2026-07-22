@@ -123,7 +123,7 @@ export default function AddVehicleScreen({ route, navigation }: any) {
       battery_capacity: parseFloat(batteryCapacity),
       range_km: parseInt(rangeKm, 10),
       plug_type: plugType,
-      is_primary: true
+      is_primary: false
     };
 
     setIsLoading(true);

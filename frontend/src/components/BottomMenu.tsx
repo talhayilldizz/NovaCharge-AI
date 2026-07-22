@@ -12,7 +12,7 @@ const COLORS = {
 
 type BottomMenuProps = {
   navigation: any;
-  activeTab: 'Home' | 'AI' | 'Route' | 'Vehicles' | 'Profile';
+  activeTab: 'Home' | 'SavedRoutes' | 'Route' | 'Vehicles' | 'Profile';
 };
 
 export default function BottomMenu({ navigation, activeTab }: BottomMenuProps) {
@@ -32,22 +32,22 @@ export default function BottomMenu({ navigation, activeTab }: BottomMenuProps) {
     <View style={styles.container}>
       {/* Ev (Home) */}
       <TouchableOpacity style={styles.tab} onPress={() => handlePress('Ev', 'Home')}>
-        <Ionicons 
-          name={activeTab === 'Home' ? "home" : "home-outline"} 
-          size={24} 
-          color={activeTab === 'Home' ? COLORS.primary : COLORS.onSurfaceVariant} 
+        <Ionicons
+          name={activeTab === 'Home' ? "home" : "home-outline"}
+          size={24}
+          color={activeTab === 'Home' ? COLORS.primary : COLORS.onSurfaceVariant}
         />
         <Text style={[styles.tabText, activeTab === 'Home' && styles.activeTabText]}>Ev</Text>
       </TouchableOpacity>
 
-      {/* AI */}
-      <TouchableOpacity style={styles.tab} onPress={() => handlePress('AI')}>
-        <MaterialCommunityIcons 
-          name="robot-outline" 
-          size={24} 
-          color={activeTab === 'AI' ? COLORS.primary : COLORS.onSurfaceVariant} 
+      {/* Rotalar */}
+      <TouchableOpacity style={styles.tab} onPress={() => handlePress('Rotalar', 'SavedRoutes')}>
+        <MaterialCommunityIcons
+          name="format-list-bulleted"
+          size={24}
+          color={activeTab === 'SavedRoutes' ? COLORS.primary : COLORS.onSurfaceVariant}
         />
-        <Text style={[styles.tabText, activeTab === 'AI' && styles.activeTabText]}>AI</Text>
+        <Text style={[styles.tabText, activeTab === 'SavedRoutes' && styles.activeTabText]}>Rotalar</Text>
       </TouchableOpacity>
 
       {/* Rota (Center, Larger) */}
@@ -60,20 +60,20 @@ export default function BottomMenu({ navigation, activeTab }: BottomMenuProps) {
 
       {/* Araçlar (Vehicles) */}
       <TouchableOpacity style={styles.tab} onPress={() => handlePress('Araçlar', 'Vehicles')}>
-        <MaterialIcons 
-          name={activeTab === 'Vehicles' ? "directions-car" : "directions-car"} 
-          size={24} 
-          color={activeTab === 'Vehicles' ? COLORS.primary : COLORS.onSurfaceVariant} 
+        <MaterialIcons
+          name={activeTab === 'Vehicles' ? "directions-car" : "directions-car"}
+          size={24}
+          color={activeTab === 'Vehicles' ? COLORS.primary : COLORS.onSurfaceVariant}
         />
         <Text style={[styles.tabText, activeTab === 'Vehicles' && styles.activeTabText]}>Araçlar</Text>
       </TouchableOpacity>
 
       {/* Profil (Profile) */}
       <TouchableOpacity style={styles.tab} onPress={() => handlePress('Profil', 'Profile')}>
-        <Ionicons 
-          name={activeTab === 'Profile' ? "person" : "person-outline"} 
-          size={24} 
-          color={activeTab === 'Profile' ? COLORS.primary : COLORS.onSurfaceVariant} 
+        <Ionicons
+          name={activeTab === 'Profile' ? "person" : "person-outline"}
+          size={24}
+          color={activeTab === 'Profile' ? COLORS.primary : COLORS.onSurfaceVariant}
         />
         <Text style={[styles.tabText, activeTab === 'Profile' && styles.activeTabText]}>Profil</Text>
       </TouchableOpacity>

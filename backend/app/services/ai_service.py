@@ -71,7 +71,7 @@ def analyze_route_with_ai(request: AIRouteAnalysisRequest) -> AIRouteAnalysisRes
                 required_stops_count=battery_status["required_stops_count"]
             )
         except Exception as e:
-            ai_response = {"selected_stations": [{"station_id": c["id"], "reason": "AI sunucusuna ulaşılamadığı için algoritmik olarak en ideal nokta seçildi."} for c in candidates[:battery_status["required_stops_count"]]]}
+            ai_response = {"selected_stations": []} # Fallback mantığı aşağıda ele alınacak
         
         # AI'dan dönen ID'leri kendi aday listemizle eşleştir
         selected_candidates = []
@@ -84,9 +84,18 @@ def analyze_route_with_ai(request: AIRouteAnalysisRequest) -> AIRouteAnalysisRes
                 matched["ai_reason"] = reason
                 selected_candidates.append(matched)
 
-        # AI saçmalayıp (Halüsinasyon) olmayan bir ID döndüyse güvenlik önlemi:
-        if not selected_candidates:
-            selected_candidates = candidates[:battery_status["required_stops_count"]]
+        # AI saçmalayıp aynı bölgeden (aynı target_ideal_km) çok fazla seçtiyse veya boş döndüyse güvenlik önlemi:
+        # Eğer yeterli sayıda eşsiz mola seçmediyse veya aynı ideal mesafeden birden fazla mola seçtiyse, algoritma devralır:
+        unique_targets = set([c["target_ideal_km"] for c in selected_candidates])
+        if len(selected_candidates) < battery_status["required_stops_count"] or len(unique_targets) < len(selected_candidates):
+            selected_candidates = []
+            seen_ideals = set()
+            for c in candidates:
+                if c["target_ideal_km"] not in seen_ideals:
+                    selected_candidates.append(c)
+                    seen_ideals.add(c["target_ideal_km"])
+                    if len(selected_candidates) == battery_status["required_stops_count"]:
+                        break
 
         # Maliyet ve Süre Hesapla (Kesin Matematik)
         tariffs = db.query(OperatorTariff).all()
@@ -103,6 +112,9 @@ def analyze_route_with_ai(request: AIRouteAnalysisRequest) -> AIRouteAnalysisRes
         if not general_recs:
             general_recs.append(f"Toplamda {battery_status['required_stops_count']} kez mola vermeniz gerekiyor.")
             general_recs.append(f"Mola noktalarında aracınızı %80'e kadar şarj etmeniz menzil sağlığınız için idealdir.")
+
+        if len(selected_candidates) < battery_status["required_stops_count"]:
+            general_recs.append("⚠️ UYARI: Rotanız üzerinde yeterli sayıda şarj istasyonu bulunamadığı için eksik mola noktası planlandı. Yolda kalma riskiniz var, lütfen seyahatinizi dikkatli planlayın!")
 
         return AIRouteAnalysisResponse(
             total_cost=cost_data["total_cost"],

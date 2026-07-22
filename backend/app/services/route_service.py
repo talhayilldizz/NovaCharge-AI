@@ -24,7 +24,8 @@ def create_route(
         start_location=start_wkt,
         end_location=end_wkt,
         total_distance_km=route.total_distance_km,
-        total_duration_mins=route.total_duration_mins
+        total_duration_mins=route.total_duration_mins,
+        ai_plan=route.ai_plan
     )
     
     db.add(db_route)

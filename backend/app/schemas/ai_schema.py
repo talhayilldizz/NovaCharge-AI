@@ -14,6 +14,8 @@ class AIRouteAnalysisRequest(BaseModel):
 
 class ChargingStop(BaseModel):
     station_name: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     charging_time_mins: int
     estimated_cost_try: float
 

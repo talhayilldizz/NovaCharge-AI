@@ -71,8 +71,8 @@ export default function VehiclesScreen({ navigation }: any) {
       "Bu aracı garajınızdan kaldırmak istediğinize emin misiniz?",
       [
         { text: "İptal", style: "cancel" },
-        { 
-          text: "Evet, Sil", 
+        {
+          text: "Evet, Sil",
           style: "destructive",
           onPress: async () => {
             try {
@@ -88,8 +88,8 @@ export default function VehiclesScreen({ navigation }: any) {
               } else {
                 Toast.show({
                   type: 'error',
-                  text1: 'Hata',
-                  text2: 'Araç silinemedi.'
+                  text1: 'Araç silinemedi.',
+                  text2: 'Birincil araç silinmez'
                 });
               }
             } catch (error) {
@@ -126,7 +126,7 @@ export default function VehiclesScreen({ navigation }: any) {
   };
 
   const renderVehicleItem = ({ item }: { item: any }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.vehicleCard}
       activeOpacity={0.7}
       onPress={() => navigation.navigate('VehicleDetail', { vehicle: item })}

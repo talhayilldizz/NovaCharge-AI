@@ -29,8 +29,9 @@ def get_ai_recommendation(
         Aşağıda sana önceden hesaplanmış, rotaya en uygun aday şarj istasyonlarının bir listesi verilecek.
         GÖREVİN:
         1. Bu rota için matematiksel olarak TAM OLARAK {required_stops_count} ADET mola noktası seçmelisin.
-        2. Adaylar listesinde her istasyonun "target_ideal_km" değeri vardır. Farklı ideal km hedeflerine uyan en iyi istasyonları seçerek rotaya dağıt.
-        3. HİÇBİR MATEMATİKSEL HESAPLAMA YAPMA (Maliyet, Süre vb.). Sadece "station_id" ve seçim "reason" (neden) değerlerini döndür.
+        2. Adaylar listesinde her istasyonun "target_ideal_km" değeri vardır. Farklı "target_ideal_km" hedeflerine uyan istasyonlardan HER BİR HEDEF İÇİN YALNIZCA BİR TANE seç.
+        3. KESİNLİKLE aynı bölgede, birbirine çok yakın (aynı "target_ideal_km" veya aralarında 50 km'den az mesafe olan) iki istasyonu peş peşe SEÇME. Mantıklı bir seyahat için molaların arası açık olmalıdır.
+        4. HİÇBİR MATEMATİKSEL HESAPLAMA YAPMA (Maliyet, Süre vb.). Sadece "station_id" ve seçim "reason" (neden) değerlerini döndür.
         YANIT FORMATI KESİNLİKLE AŞAĞIDAKİ GİBİ OLMALIDIR (Sadece JSON):
         {{
         "selected_stations": [
