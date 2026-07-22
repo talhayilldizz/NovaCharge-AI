@@ -121,11 +121,21 @@ export default function StationListScreen({ route, navigation }: any) {
     }
   };
 
+  const handleStationPress = (item: any) => {
+    navigation.navigate('Map', {
+      focusStation: {
+        lat: item.latitude,
+        lon: item.longitude,
+        id: item.id
+      }
+    });
+  };
+
   const renderStation = ({ item }: { item: any }) => {
     const isFav = favorites.some(f => f.external_station_id === item.id);
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={() => handleStationPress(item)}>
         <View style={styles.cardHeader}>
           <View style={{ flex: 1 }}>
             <Text style={styles.stationName} numberOfLines={1}>{item.name}</Text>
@@ -143,18 +153,14 @@ export default function StationListScreen({ route, navigation }: any) {
         <Text style={styles.address}>Koordinat: {item.latitude?.toFixed(4)}, {item.longitude?.toFixed(4)}</Text>
 
         <View style={styles.plugsContainer}>
-          <View style={[styles.plugBadge, { backgroundColor: item.available_sockets > 0 ? 'rgba(0, 227, 139, 0.15)' : 'rgba(255, 84, 73, 0.15)' }]}>
-            <MaterialIcons 
-              name={item.available_sockets > 0 ? "ev-station" : "block"} 
-              size={16} 
-              color={item.available_sockets > 0 ? COLORS.primary : COLORS.danger} 
-            />
-            <Text style={[styles.plugBadgeText, { color: item.available_sockets > 0 ? COLORS.primary : COLORS.danger }]}>
-              {item.available_sockets > 0 ? `${item.available_sockets} Priz Müsait` : 'Tüm Prizler Dolu'}
+          <View style={[styles.plugBadge, { backgroundColor: 'rgba(0, 227, 139, 0.15)' }]}>
+            <MaterialIcons name="ev-station" size={16} color={COLORS.primary} />
+            <Text style={[styles.plugBadgeText, { color: COLORS.primary }]}>
+              {item.total_sockets ? `Toplam ${item.total_sockets} Priz` : 'Priz Bilgisi Yok'}
             </Text>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 

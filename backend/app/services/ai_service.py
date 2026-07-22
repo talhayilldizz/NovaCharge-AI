@@ -2,6 +2,7 @@ from app.schemas.ai_schema import AIRouteAnalysisRequest, AIRouteAnalysisRespons
 from app.database.session import SessionLocal
 from app.models.operator_tariff import OperatorTariff
 from app.models.station import Station
+from app.services import station_service
 
 from app.services.ai_pipeline.battery_service import calculate_energy_needs
 from app.services.ai_pipeline.route_service import analyze_stations_on_route
@@ -10,7 +11,6 @@ from app.services.ai_pipeline.ai_recommendation_service import get_ai_recommenda
 from app.services.ai_pipeline.cost_service import calculate_time_and_cost
 
 def analyze_route_with_ai(request: AIRouteAnalysisRequest) -> AIRouteAnalysisResponse:
-    # 1. Batarya ve Menzil Analizi
     battery_status = calculate_energy_needs(
         total_distance_km=request.total_distance_km,
         battery_capacity_kwh=request.battery_capacity_kwh,
@@ -30,27 +30,26 @@ def analyze_route_with_ai(request: AIRouteAnalysisRequest) -> AIRouteAnalysisRes
 
     db = SessionLocal()
     try:
-        # Veritabanından tüm istasyonları çek
-        all_stations_db = db.query(Station).all()
+        all_stations_db = station_service.get_lightweight_stations(db=db, limit=20000)
         stations = [
             {
-                "id": str(s.id),
-                "name": s.name,
-                "latitude": s.latitude,
-                "longitude": s.longitude,
-                "is_fast_charge": s.is_fast_charge,
+                "id": str(s[0]),
+                "name": s[1],
+                "brand": s[2],
+                "latitude": s[3],
+                "longitude": s[4],
+                "is_fast_charge": s[5],
             }
             for s in all_stations_db
         ]
         
-        # 2. Rotaya Göre İstasyonları Analiz Et (Mesafe ve Kilometre)
         analyzed_stations = analyze_stations_on_route(
             route_coordinates=request.route_coordinates,
             total_distance_km=request.total_distance_km,
             stations=stations
         )
         
-        # 3. İdeal Noktalara Göre Adayları Sırala ve Seç
+        
         candidates = rank_and_select_candidates(
             stations=analyzed_stations,
             ideal_stop_distances=battery_status["ideal_stop_distances"]
@@ -64,16 +63,14 @@ def analyze_route_with_ai(request: AIRouteAnalysisRequest) -> AIRouteAnalysisRes
                 general_recommendations=["Rotanız üzerinde uygun bir şarj istasyonu bulunamadı! Lütfen rotanızı değiştirin."]
             )
             
-        # 4. GPT'ye Seçim Yaptır (Sadece Karar Aşaması)
         try:
             ai_response = get_ai_recommendation(
                 candidates=candidates,
                 required_stops_count=battery_status["required_stops_count"]
             )
         except Exception as e:
-            ai_response = {"selected_stations": []} # Fallback mantığı aşağıda ele alınacak
+            ai_response = {"selected_stations": []} 
         
-        # AI'dan dönen ID'leri kendi aday listemizle eşleştir
         selected_candidates = []
         for ai_stop in ai_response.get("selected_stations", []):
             st_id = ai_stop.get("station_id")
@@ -84,8 +81,6 @@ def analyze_route_with_ai(request: AIRouteAnalysisRequest) -> AIRouteAnalysisRes
                 matched["ai_reason"] = reason
                 selected_candidates.append(matched)
 
-        # AI saçmalayıp aynı bölgeden (aynı target_ideal_km) çok fazla seçtiyse veya boş döndüyse güvenlik önlemi:
-        # Eğer yeterli sayıda eşsiz mola seçmediyse veya aynı ideal mesafeden birden fazla mola seçtiyse, algoritma devralır:
         unique_targets = set([c["target_ideal_km"] for c in selected_candidates])
         if len(selected_candidates) < battery_status["required_stops_count"] or len(unique_targets) < len(selected_candidates):
             selected_candidates = []
@@ -97,7 +92,6 @@ def analyze_route_with_ai(request: AIRouteAnalysisRequest) -> AIRouteAnalysisRes
                     if len(selected_candidates) == battery_status["required_stops_count"]:
                         break
 
-        # Maliyet ve Süre Hesapla (Kesin Matematik)
         tariffs = db.query(OperatorTariff).all()
         tariff_dict = {t.operator_name.upper(): {"ac": t.ac_price_per_kwh, "dc": t.dc_price_per_kwh} for t in tariffs}
         
@@ -107,7 +101,6 @@ def analyze_route_with_ai(request: AIRouteAnalysisRequest) -> AIRouteAnalysisRes
             tariff_dict=tariff_dict
         )
         
-        # Tavsiyeleri oluştur
         general_recs = ai_response.get("general_recommendations", [])
         if not general_recs:
             general_recs.append(f"Toplamda {battery_status['required_stops_count']} kez mola vermeniz gerekiyor.")

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
 from app.database.session import get_db
-from app.schemas.station_schema import StationUpdate, StationCreate, StationResponse
+from app.schemas.station_schema import StationUpdate, StationCreate, StationResponse, LightweightStationResponse
 from app.services import station_service
 from typing import List
 
@@ -11,6 +11,48 @@ router = APIRouter(
     prefix="/stations",
     tags=["İstasyon İşlemleri"]
 )
+
+@router.get("/lightweight", response_model=List[LightweightStationResponse])
+def get_lightweight_stations(
+    db: Session = Depends(get_db),
+    limit: int = 20000
+):
+    """
+    Haritada performanslı gösterim için çok hafifletilmiş istasyon verisi döner.
+    """
+    stations = station_service.get_lightweight_stations(db=db, limit=limit)
+    
+    # SQLAlchemy query returns tuples of (id, name, latitude, longitude, is_fast_charge, total_sockets)
+    # We map them to dictionaries so Pydantic can parse them
+    return [
+        {
+            "id": s[0],
+            "name": s[1],
+            "brand": s[2],
+            "latitude": s[3],
+            "longitude": s[4],
+            "is_fast_charge": s[5],
+            "total_sockets": s[6]
+        }
+        for s in stations
+    ]
+
+@router.get("/nearby", response_model=List[StationResponse])
+def get_nearby_stations(
+    lat: float,
+    lon: float,
+    radius_km: float = 10.0,
+    db: Session = Depends(get_db)
+):
+    stations = station_service.get_nearby_stations(db=db, lat=lat, lon=lon, radius_km=radius_km)
+    
+    if not stations:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Belirtilen konumun {radius_km} km çevresinde hiçbir istasyon bulunamadı."
+        )
+        
+    return stations
 
 @router.get("/{station_id}", response_model=StationResponse)
 def get_station(
@@ -29,23 +71,6 @@ def get_station(
         )
     
     return db_station
-
-@router.get("/nearby", response_model=List[StationResponse])
-def get_nearby_stations(
-    lat: float,
-    lon: float,
-    radius_km: float = 10.0,
-    db: Session = Depends(get_db)
-):
-    stations = station_service.get_nearby_stations(db=db, lat=lat, lon=lon, radius_km=radius_km)
-    
-    if not stations:
-        raise HTTPException(
-            status_code=404, 
-            detail=f"Belirtilen konumun {radius_km} km çevresinde hiçbir istasyon bulunamadı."
-        )
-        
-    return stations
 
 
 @router.get("/",response_model = List[StationResponse])

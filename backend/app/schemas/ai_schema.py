@@ -18,6 +18,7 @@ class ChargingStop(BaseModel):
     longitude: Optional[float] = None
     charging_time_mins: int
     estimated_cost_try: float
+    reason: Optional[str] = None
 
 class AIRouteAnalysisResponse(BaseModel):
     total_cost: float

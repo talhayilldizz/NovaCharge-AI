@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,7 +10,8 @@ import {
   Dimensions,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Keyboard
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,16 +19,18 @@ import * as Location from 'expo-location';
 import { apiClient } from '../lib/apiClient';
 import Toast from 'react-native-toast-message';
 import BottomMenu from '../components/BottomMenu';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
 const COLORS = {
-  background: '#131315',
-  surface: '#1c1b1d',
+  background: '#0D0D0F', // Koyu şık siyah
+  surface: 'rgba(28, 27, 29, 0.7)', // Glassmorphism
+  surfaceSolid: '#1c1b1d',
   primary: '#00e38b',
   onSurface: '#e6e1e5',
   onSurfaceVariant: '#b9cbbc',
-  surfaceVariant: '#353437',
+  surfaceVariant: 'rgba(53, 52, 55, 0.5)',
 };
 
 export default function RoutePlannerScreen({ navigation }: any) {
@@ -36,14 +39,22 @@ export default function RoutePlannerScreen({ navigation }: any) {
   const [batteryPercentage, setBatteryPercentage] = useState('100');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Başlangıç konumu (GPS)
-  const [startLocation, setStartLocation] = useState<any>(null);
+  // Arama State'leri
+  const [activeInput, setActiveInput] = useState<'start' | 'end' | null>(null);
   
-  // Bitiş konumu arama ve sonuç
-  const [searchQuery, setSearchQuery] = useState('');
+  // Başlangıç Konumu
+  const [startLocation, setStartLocation] = useState<any>(null); // {lat, lon, name}
+  const [startSearchQuery, setStartSearchQuery] = useState('Mevcut Konumum');
+  const [isUsingGPS, setIsUsingGPS] = useState(true);
+
+  // Varış Konumu
+  const [selectedDestination, setSelectedDestination] = useState<any>(null); // {lat, lon, name}
+  const [endSearchQuery, setEndSearchQuery] = useState('');
+
+  // Ortak Arama
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedDestination, setSelectedDestination] = useState<any>(null);
+  const searchTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -54,7 +65,6 @@ export default function RoutePlannerScreen({ navigation }: any) {
           const vData = await vehicleRes.json();
           setVehicles(vData);
           if (vData.length > 0) {
-            // Varsayılan olarak primary aracı seç
             const primary = vData.find((v: any) => v.is_primary);
             setSelectedVehicleId(primary ? primary.id : vData[0].id);
           }
@@ -63,31 +73,52 @@ export default function RoutePlannerScreen({ navigation }: any) {
         console.error("Araçlar yüklenemedi", err);
       }
 
-      // Mevcut Konumu Al
-      try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          let location = await Promise.race([
-            Location.getCurrentPositionAsync({}),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
-          ]);
-          setStartLocation((location as any).coords);
-        }
-      } catch (err) {
-        console.warn("Konum alınamadı, test konumu kullanılıyor.");
-        setStartLocation({ latitude: 40.990, longitude: 29.020 }); // Kadıköy Fallback
-      }
-
+      await getCurrentLocation();
       setIsLoading(false);
     };
 
     init();
   }, []);
 
-  // OSM Nominatim ile Adres Arama
-  const handleSearch = async (text: string) => {
-    setSearchQuery(text);
-    setSelectedDestination(null);
+  const getCurrentLocation = async () => {
+    setIsSearching(true);
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        let location = await Promise.race([
+          Location.getCurrentPositionAsync({}),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
+        ]) as any;
+        
+        setStartLocation({ lat: location.coords.latitude, lon: location.coords.longitude, name: "Mevcut Konumum" });
+        setStartSearchQuery("Mevcut Konumum");
+        setIsUsingGPS(true);
+        setSearchResults([]);
+        setActiveInput(null);
+      }
+    } catch (err) {
+      console.warn("Konum alınamadı, test konumu kullanılıyor.");
+      setStartLocation({ lat: 40.990, lon: 29.020, name: "Kadıköy (Test)" }); 
+      setStartSearchQuery("Kadıköy (Test)");
+      setIsUsingGPS(false);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Dinamik Arama
+  const handleSearch = (text: string, type: 'start' | 'end') => {
+    setActiveInput(type);
+    if (type === 'start') {
+      setStartSearchQuery(text);
+      if (text !== 'Mevcut Konumum') {
+        setIsUsingGPS(false);
+        setStartLocation(null);
+      }
+    } else {
+      setEndSearchQuery(text);
+      setSelectedDestination(null);
+    }
 
     if (text.length < 3) {
       setSearchResults([]);
@@ -95,38 +126,48 @@ export default function RoutePlannerScreen({ navigation }: any) {
     }
 
     setIsSearching(true);
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&countrycodes=TR`, {
-        headers: {
-          'User-Agent': 'VoltPilotApp/1.0',
-          'Accept-Language': 'tr-TR,tr;q=0.9'
-        }
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&countrycodes=TR`, {
+          headers: { 'User-Agent': 'VoltPilotApp/1.0', 'Accept-Language': 'tr-TR,tr;q=0.9' }
+        });
+        const data = await response.json();
+        setSearchResults(data);
+      } catch (err) {
+        console.error("Arama hatası:", err);
+      } finally {
+        setIsSearching(false);
       }
-      const data = await response.json();
-      setSearchResults(data);
-    } catch (err) {
-      console.error("Arama hatası:", err);
-    } finally {
-      setIsSearching(false);
-    }
+    }, 600);
   };
 
-  const selectDestination = (item: any) => {
-    setSelectedDestination({
+  const selectLocation = (item: any) => {
+    const locData = {
       name: item.display_name,
       lat: parseFloat(item.lat),
       lon: parseFloat(item.lon)
-    });
-    setSearchQuery(item.display_name.split(',')[0]); // Sadece başlığı göster
+    };
+    const shortName = item.display_name.split(',')[0];
+
+    if (activeInput === 'start') {
+      setStartLocation(locData);
+      setStartSearchQuery(shortName);
+    } else {
+      setSelectedDestination(locData);
+      setEndSearchQuery(shortName);
+    }
+    
     setSearchResults([]);
+    setActiveInput(null);
+    Keyboard.dismiss();
   };
 
   const handleCreateRoute = () => {
     if (!startLocation) {
-      Toast.show({ type: 'error', text1: 'Hata', text2: 'Başlangıç konumunuz alınamadı.' });
+      Toast.show({ type: 'error', text1: 'Hata', text2: 'Lütfen bir başlangıç noktası belirleyin.' });
       return;
     }
     if (!selectedDestination) {
@@ -140,11 +181,10 @@ export default function RoutePlannerScreen({ navigation }: any) {
 
     const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
 
-    // Map sayfasına rota parametrelerini gönder
     navigation.navigate('Map', {
       routeConfig: {
-        startLat: startLocation.latitude,
-        startLon: startLocation.longitude,
+        startLat: startLocation.lat,
+        startLon: startLocation.lon,
         endLat: selectedDestination.lat,
         endLon: selectedDestination.lon,
         vehicleId: selectedVehicleId,
@@ -172,54 +212,75 @@ export default function RoutePlannerScreen({ navigation }: any) {
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.headerTitle}>Yeni Rota Planla</Text>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          
+          <Text style={styles.headerTitle}>Rotanızı Planlayın</Text>
+          <Text style={styles.headerSubtitle}>Yolculuğunuz için en uygun şarj noktalarını yapay zeka ile optimize edelim.</Text>
 
-          {/* Konum Seçimleri */}
-          <View style={styles.section}>
+          {/* Konum Seçimleri - Glassmorphism */}
+          <View style={styles.glassCard}>
             <View style={styles.locationContainer}>
               <View style={styles.routeLineContainer}>
-                <View style={styles.startDot} />
+                <View style={[styles.dot, { backgroundColor: COLORS.onSurfaceVariant }]} />
                 <View style={styles.routeLine} />
-                <MaterialIcons name="location-on" size={20} color={COLORS.primary} style={{ marginTop: 2 }} />
+                <MaterialIcons name="location-on" size={24} color={COLORS.primary} style={{ marginTop: 2, marginLeft: -2 }} />
               </View>
               
               <View style={styles.locationInputs}>
+                {/* Başlangıç Inputu */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.inputLabel}>Başlangıç</Text>
-                  <View style={styles.inputBox}>
-                    <Text style={styles.inputText}>
-                      {startLocation ? "Mevcut Konumum" : "Konum Bekleniyor..."}
-                    </Text>
+                  <Text style={styles.inputLabel}>Nereden?</Text>
+                  <View style={styles.inputRow}>
+                    <TextInput
+                      style={[styles.textInput, activeInput === 'start' && styles.textInputActive]}
+                      placeholder="Başlangıç noktası..."
+                      placeholderTextColor={COLORS.onSurfaceVariant}
+                      value={startSearchQuery}
+                      onChangeText={(t) => handleSearch(t, 'start')}
+                      onFocus={() => { setActiveInput('start'); setSearchResults([]); }}
+                    />
+                    <TouchableOpacity 
+                      style={styles.gpsButton}
+                      onPress={getCurrentLocation}
+                    >
+                      <MaterialIcons name="my-location" size={20} color={isUsingGPS ? COLORS.primary : COLORS.onSurfaceVariant} />
+                    </TouchableOpacity>
                   </View>
                 </View>
 
+                {/* Bitiş Inputu */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.inputLabel}>Varış Noktası</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="Nereye gitmek istiyorsunuz?"
-                    placeholderTextColor={COLORS.onSurfaceVariant}
-                    value={searchQuery}
-                    onChangeText={handleSearch}
-                  />
-                  {isSearching && (
-                    <ActivityIndicator style={{ position: 'absolute', right: 12, top: 38 }} color={COLORS.primary} />
-                  )}
+                  <Text style={styles.inputLabel}>Nereye?</Text>
+                  <View style={styles.inputRow}>
+                    <TextInput
+                      style={[styles.textInput, activeInput === 'end' && styles.textInputActive]}
+                      placeholder="Varış noktası..."
+                      placeholderTextColor={COLORS.onSurfaceVariant}
+                      value={endSearchQuery}
+                      onChangeText={(t) => handleSearch(t, 'end')}
+                      onFocus={() => { setActiveInput('end'); setSearchResults([]); }}
+                    />
+                  </View>
                 </View>
               </View>
             </View>
 
             {/* Arama Sonuçları */}
+            {isSearching && (
+              <ActivityIndicator style={{ marginTop: 16 }} color={COLORS.primary} />
+            )}
+            
             {searchResults.length > 0 && (
               <View style={styles.searchResults}>
                 {searchResults.map((item, index) => (
                   <TouchableOpacity 
                     key={index} 
                     style={styles.searchResultItem}
-                    onPress={() => selectDestination(item)}
+                    onPress={() => selectLocation(item)}
                   >
-                    <MaterialIcons name="place" size={20} color={COLORS.onSurfaceVariant} />
+                    <View style={styles.searchIconBox}>
+                      <MaterialIcons name="place" size={20} color={COLORS.primary} />
+                    </View>
                     <Text style={styles.searchResultText} numberOfLines={2}>
                       {item.display_name}
                     </Text>
@@ -240,7 +301,7 @@ export default function RoutePlannerScreen({ navigation }: any) {
                 </TouchableOpacity>
               </View>
             ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingVertical: 8 }}>
                 {vehicles.map(v => {
                   const isSelected = selectedVehicleId === v.id;
                   return (
@@ -248,16 +309,17 @@ export default function RoutePlannerScreen({ navigation }: any) {
                       key={v.id}
                       style={[styles.vehicleCard, isSelected && styles.vehicleCardSelected]}
                       onPress={() => setSelectedVehicleId(v.id)}
+                      activeOpacity={0.9}
                     >
                       <MaterialIcons 
                         name="directions-car" 
-                        size={32} 
+                        size={36} 
                         color={isSelected ? COLORS.background : COLORS.onSurface} 
                       />
                       <Text style={[styles.vehicleBrand, isSelected && { color: COLORS.background }]}>
                         {v.brand}
                       </Text>
-                      <Text style={[styles.vehicleModel, isSelected && { color: 'rgba(0,0,0,0.6)' }]}>
+                      <Text style={[styles.vehicleModel, isSelected && { color: 'rgba(0,0,0,0.7)' }]}>
                         {v.model}
                       </Text>
                     </TouchableOpacity>
@@ -268,29 +330,41 @@ export default function RoutePlannerScreen({ navigation }: any) {
 
             {/* Şarj Durumu Girişi */}
             {vehicles.length > 0 && (
-              <View style={{ marginTop: 24 }}>
-                <Text style={styles.sectionTitle}>Mevcut Şarjınız (%)</Text>
-                <TextInput
-                  style={[styles.textInput, { borderBottomColor: COLORS.surfaceVariant }]}
-                  placeholder="Örn: 80"
-                  placeholderTextColor={COLORS.onSurfaceVariant}
-                  keyboardType="numeric"
-                  value={batteryPercentage}
-                  onChangeText={setBatteryPercentage}
-                />
+              <View style={styles.glassCardMini}>
+                <View>
+                  <Text style={styles.sectionTitleMini}>Mevcut Şarjınız (%)</Text>
+                  <Text style={styles.sectionSubtitleMini}>Yola çıkarkenki batarya seviyeniz</Text>
+                </View>
+                <View style={styles.batteryInputBox}>
+                  <TextInput
+                    style={styles.batteryInput}
+                    keyboardType="numeric"
+                    value={batteryPercentage}
+                    onChangeText={setBatteryPercentage}
+                    maxLength={3}
+                  />
+                  <Text style={{color: COLORS.primary, fontWeight: 'bold'}}>%</Text>
+                </View>
               </View>
             )}
           </View>
 
           {/* Rota Oluştur Butonu */}
           <TouchableOpacity 
-            style={[styles.createButton, (!selectedDestination || !selectedVehicleId) && styles.createButtonDisabled]} 
+            style={[styles.createButton, (!startLocation || !selectedDestination || !selectedVehicleId) && styles.createButtonDisabled]} 
             activeOpacity={0.8}
             onPress={handleCreateRoute}
-            disabled={!selectedDestination || !selectedVehicleId}
+            disabled={!startLocation || !selectedDestination || !selectedVehicleId}
           >
-            <Text style={styles.createButtonText}>Haritada Göster</Text>
-            <MaterialIcons name="map" size={20} color={COLORS.background} />
+            <LinearGradient
+              colors={['#00e38b', '#00b36e']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.gradientButton}
+            >
+              <Text style={styles.createButtonText}>Haritada Göster</Text>
+              <MaterialIcons name="map" size={24} color={COLORS.background} />
+            </LinearGradient>
           </TouchableOpacity>
           
         </ScrollView>
@@ -303,46 +377,84 @@ export default function RoutePlannerScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
-  scrollContent: { padding: 20, paddingBottom: 120 },
-  headerTitle: { fontSize: 28, fontWeight: '700', color: COLORS.onSurface, marginBottom: 24 },
-  section: { marginBottom: 32 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: COLORS.onSurface, marginBottom: 16 },
+  scrollContent: { padding: 24, paddingBottom: 120 },
+  headerTitle: { fontSize: 32, fontWeight: '800', color: COLORS.onSurface, marginBottom: 8, letterSpacing: -0.5 },
+  headerSubtitle: { fontSize: 14, color: COLORS.onSurfaceVariant, marginBottom: 28, lineHeight: 20 },
+  
+  section: { marginTop: 32 },
+  sectionTitle: { fontSize: 20, fontWeight: '700', color: COLORS.onSurface, marginBottom: 16 },
+  sectionTitleMini: { fontSize: 16, fontWeight: '700', color: COLORS.onSurface, marginBottom: 4 },
+  sectionSubtitleMini: { fontSize: 12, color: COLORS.onSurfaceVariant },
+
+  glassCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  glassCardMini: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
   
   locationContainer: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceVariant,
   },
   routeLineContainer: {
     width: 24,
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
+    marginTop: 12,
   },
-  startDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: COLORS.onSurfaceVariant, marginTop: 10 },
-  routeLine: { flex: 1, width: 2, backgroundColor: COLORS.surfaceVariant, marginVertical: 4 },
+  dot: { width: 14, height: 14, borderRadius: 7, backgroundColor: COLORS.onSurfaceVariant },
+  routeLine: { flex: 1, width: 2, backgroundColor: COLORS.surfaceVariant, marginVertical: 8 },
   
-  locationInputs: { flex: 1, gap: 16 },
+  locationInputs: { flex: 1, gap: 20 },
   inputWrapper: { width: '100%' },
-  inputLabel: { fontSize: 12, color: COLORS.onSurfaceVariant, marginBottom: 6, fontWeight: '600' },
-  inputBox: { height: 48, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.surfaceVariant },
-  inputText: { color: COLORS.onSurface, fontSize: 16 },
+  inputLabel: { fontSize: 13, color: COLORS.onSurfaceVariant, marginBottom: 8, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  
   textInput: { 
-    height: 48, 
+    flex: 1,
+    height: 52, 
     color: COLORS.onSurface, 
     fontSize: 16, 
-    borderBottomWidth: 1, 
-    borderBottomColor: COLORS.primary 
+    backgroundColor: COLORS.surfaceSolid,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1, 
+    borderColor: 'transparent' 
+  },
+  textInputActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: 'rgba(0, 227, 139, 0.05)'
+  },
+  
+  gpsButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: COLORS.surfaceSolid,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent'
   },
 
   searchResults: {
-    marginTop: 8,
-    backgroundColor: COLORS.surface,
+    marginTop: 16,
+    backgroundColor: COLORS.surfaceSolid,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.surfaceVariant,
+    borderColor: 'rgba(255,255,255,0.05)',
     overflow: 'hidden',
   },
   searchResultItem: {
@@ -350,39 +462,71 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceVariant,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
     gap: 12,
   },
-  searchResultText: { flex: 1, color: COLORS.onSurface, fontSize: 14 },
+  searchIconBox: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0, 227, 139, 0.1)', justifyContent: 'center', alignItems: 'center'
+  },
+  searchResultText: { flex: 1, color: COLORS.onSurface, fontSize: 14, lineHeight: 20 },
 
-  emptyGarage: { padding: 20, backgroundColor: COLORS.surface, borderRadius: 16, alignItems: 'center' },
+  emptyGarage: { padding: 24, backgroundColor: COLORS.surface, borderRadius: 20, alignItems: 'center' },
   
   vehicleCard: {
-    width: 120,
-    padding: 16,
+    width: 140,
+    padding: 20,
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.surfaceVariant,
+    borderColor: 'rgba(255,255,255,0.05)',
     alignItems: 'center',
   },
   vehicleCardSelected: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8
   },
-  vehicleBrand: { fontSize: 14, fontWeight: '700', color: COLORS.onSurface, marginTop: 12 },
-  vehicleModel: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 4 },
+  vehicleBrand: { fontSize: 16, fontWeight: '800', color: COLORS.onSurface, marginTop: 16 },
+  vehicleModel: { fontSize: 13, color: COLORS.onSurfaceVariant, marginTop: 4, fontWeight: '500' },
+
+  batteryInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceSolid,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 48,
+    width: 80,
+  },
+  batteryInput: {
+    flex: 1,
+    color: COLORS.primary,
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
 
   createButton: {
+    marginTop: 40,
+    borderRadius: 20,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10
+  },
+  gradientButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: 16,
-    gap: 8,
-    marginTop: 16,
+    paddingVertical: 18,
+    borderRadius: 20,
+    gap: 12,
   },
-  createButtonDisabled: { opacity: 0.5 },
-  createButtonText: { color: COLORS.background, fontSize: 16, fontWeight: '700' },
+  createButtonDisabled: { opacity: 0.4, shadowOpacity: 0, elevation: 0 },
+  createButtonText: { color: COLORS.background, fontSize: 18, fontWeight: '800' },
 });

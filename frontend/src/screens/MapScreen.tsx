@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -29,7 +29,7 @@ const COLORS = {
 };
 
 // Dinamik HTML oluşturan fonksiyon
-const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObject | null, routeData: any = null) => `
+const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObject | null, routeData: any = null, focusStation: any = null) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -171,6 +171,10 @@ const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObje
             width: 100%;
             cursor: pointer;
         }
+        .leaflet-top.leaflet-right {
+            margin-top: 100px !important; /* Header'ın altında kalması için */
+            margin-right: 10px !important;
+        }
     </style>
 </head>
 <body>
@@ -178,12 +182,19 @@ const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObje
     <script>
         var userLat = ${userLoc ? userLoc.coords.latitude : 'null'};
         var userLon = ${userLoc ? userLoc.coords.longitude : 'null'};
+        
+        var focusLat = ${focusStation ? focusStation.lat : 'null'};
+        var focusLon = ${focusStation ? focusStation.lon : 'null'};
 
         var defaultLat = 39.92077;
         var defaultLon = 32.85411;
         var defaultZoom = 6;
 
-        if (userLat !== null && userLon !== null) {
+        if (focusLat !== null && focusLon !== null) {
+            defaultLat = focusLat;
+            defaultLon = focusLon;
+            defaultZoom = 15;
+        } else if (userLat !== null && userLon !== null) {
             defaultLat = userLat;
             defaultLon = userLon;
             defaultZoom = 12; // Konum varsa daha yakından başlat
@@ -191,8 +202,8 @@ const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObje
 
         var map = L.map('map', {zoomControl: false}).setView([defaultLat, defaultLon], defaultZoom);
         
-        // Sağ alta zoom kontrolünü ekliyoruz
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        // Sağ üste zoom kontrolünü ekliyoruz (alttaki butonların altında kalmaması için)
+        L.control.zoom({ position: 'topright' }).addTo(map);
         
         // Google Maps (Standart Görünüm) + CSS Dark Mode
         L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
@@ -257,10 +268,10 @@ const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObje
         var stations = ${JSON.stringify(stationsData)};
 
         stations.forEach(function(station) {
-            var isAvailable = station.available_sockets > 0;
+            var isAvailable = station.total_sockets > 0;
             var iconClass = isAvailable ? 'custom-marker' : 'custom-marker busy';
             var badgeClass = isAvailable ? 'popup-badge' : 'popup-badge busy';
-            var statusText = isAvailable ? 'Müsait (' + station.available_sockets + ' Boş)' : 'Dolu';
+            var statusText = isAvailable ? station.total_sockets + ' Soket' : 'Dolu';
             var speedText = station.is_fast_charge ? 'Hızlı Şarj (DC)' : 'Standart (AC)';
 
             var customIcon = L.divIcon({
@@ -272,10 +283,10 @@ const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObje
             });
 
             var popupContent = '<div style="text-align:center; padding: 4px;">' +
-                               '<div class="popup-title">' + station.name + '</div>' +
+                               '<div class="popup-title">' + (station.name || 'Şarj İstasyonu') + '</div>' +
                                '<div class="popup-subtitle">' + speedText + '</div>' +
                                '<div class="' + badgeClass + '">' + statusText + '</div>' +
-                               '<button class="popup-button" onclick="alert(\\'Rota oluşturuluyor...\\')">Rota Çiz</button>' +
+                               '<button class="popup-button" onclick="window.ReactNativeWebView.postMessage(JSON.stringify({type:\\\'STATION_CLICK\\\', id:\\\'' + station.id + '\\\'}))">Detayları Gör</button>' +
                                '</div>';
 
             if (station.latitude && station.longitude) {
@@ -294,7 +305,10 @@ const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObje
 
 import Toast from 'react-native-toast-message';
 
-export default function MapScreen({ route, navigation }: any) {
+export default function MapScreen({ navigation, route }: any) {
+  // WebView Reference
+  const webViewRef = useRef<WebView>(null);
+
   const [allStations, setAllStations] = useState<any[]>([]);
   const [filteredStations, setFilteredStations] = useState<any[]>([]);
   const [userLocation, setUserLocation] = useState<any>(null);
@@ -303,8 +317,16 @@ export default function MapScreen({ route, navigation }: any) {
   const routeConfig = route.params?.routeConfig;
   const [routeData, setRouteData] = useState<any>(null);
 
+  // Focus Station Parametresi
+  const focusStation = route.params?.focusStation;
+
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Station Detail Modal State
+  const [selectedStation, setSelectedStation] = useState<any>(null);
+  const [showStationModal, setShowStationModal] = useState(false);
+  const [isStationLoading, setIsStationLoading] = useState(false);
 
   // AI State
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -348,7 +370,7 @@ export default function MapScreen({ route, navigation }: any) {
     // 2. İstasyonları backendden al
     const loadStations = async () => {
       try {
-        const res = await apiClient('/stations/?limit=2000', { method: 'GET' });
+        const res = await apiClient('/stations/lightweight?limit=20000', { method: 'GET' });
         if (res.ok) {
           const data = await res.json();
           setAllStations(data);
@@ -364,7 +386,7 @@ export default function MapScreen({ route, navigation }: any) {
       if (routeConfig) {
         const { startLat, startLon, endLat, endLon } = routeConfig;
         // OSRM lon,lat formatı ister
-        const url = `http://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson`;
+        const url = `https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson`;
         try {
           const res = await fetch(url);
           const data = await res.json();
@@ -402,9 +424,23 @@ export default function MapScreen({ route, navigation }: any) {
     setFilteredStations(result);
   }, [searchQuery, allStations]);
 
+  // Focus Station değiştiğinde kamerayı o istasyona kaydır
+  useEffect(() => {
+    if (focusStation && webViewRef.current) {
+      setTimeout(() => {
+        webViewRef.current?.injectJavaScript(`
+          if (typeof map !== 'undefined') {
+            map.flyTo([${focusStation.lat}, ${focusStation.lon}], 15, { animate: true, duration: 1.5 });
+          }
+          true;
+        `);
+      }, 300);
+    }
+  }, [focusStation]);
+
   const htmlSource = useMemo(() => {
-    return { html: generateLeafletHTML(filteredStations, userLocation, routeData) };
-  }, [filteredStations, userLocation, routeData]);
+    return { html: generateLeafletHTML(filteredStations, userLocation, routeData, focusStation) };
+  }, [filteredStations, userLocation, routeData, focusStation]);
 
 
 
@@ -451,6 +487,31 @@ export default function MapScreen({ route, navigation }: any) {
     }
   };
 
+  // Station Click Handler
+  const handleMessage = async (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'STATION_CLICK') {
+        setIsStationLoading(true);
+        setShowStationModal(true); // Open modal immediately to show loading state
+        
+        const res = await apiClient(`/stations/${data.id}`, { method: 'GET' });
+        if (res.ok) {
+          const stationData = await res.json();
+          setSelectedStation(stationData);
+        } else {
+          Toast.show({ type: 'error', text1: 'Hata', text2: 'İstasyon detayları alınamadı.' });
+          setShowStationModal(false);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setIsStationLoading(false);
+    } finally {
+      setIsStationLoading(false);
+    }
+  };
+
   // Rotayı Veritabanına Kaydet
   const handleSaveRoute = async () => {
     if (!routeConfig || !routeData) return;
@@ -493,11 +554,13 @@ export default function MapScreen({ route, navigation }: any) {
 
       {/* WebView Map */}
       <WebView
+        ref={webViewRef}
         originWhitelist={['*']}
         source={htmlSource}
         style={styles.map}
         scrollEnabled={false}
         bounces={false}
+        onMessage={handleMessage}
       />
 
       {/* AI Analiz Butonu (Rota çizildiğinde görünür) */}
@@ -622,6 +685,17 @@ export default function MapScreen({ route, navigation }: any) {
                     </View>
                     
                     <Text style={styles.aiStopReason}>"{stop.reason}"</Text>
+
+                    <TouchableOpacity 
+                      style={{ marginTop: 12, backgroundColor: COLORS.surfaceVariant, padding: 8, borderRadius: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
+                      onPress={() => {
+                        setShowAiModal(false);
+                        webViewRef.current?.injectJavaScript(`map.flyTo([${stop.latitude}, ${stop.longitude}], 15, {animate: true, duration: 1.5}); true;`);
+                      }}
+                    >
+                      <MaterialIcons name="map" size={16} color={COLORS.primary} style={{ marginRight: 6 }} />
+                      <Text style={{ color: COLORS.primary, fontWeight: 'bold' }}>Haritada Gör</Text>
+                    </TouchableOpacity>
                   </View>
                 ))
               )}
@@ -637,6 +711,73 @@ export default function MapScreen({ route, navigation }: any) {
           </View>
         </View>
       )}
+
+      {/* Station Details Modal */}
+      {showStationModal && (
+        <View style={styles.aiModalOverlay}>
+          <View style={styles.aiModalContent}>
+            <View style={styles.aiModalHeader}>
+              <Text style={styles.aiModalTitle}>İstasyon Detayları</Text>
+              <TouchableOpacity onPress={() => { setShowStationModal(false); setSelectedStation(null); }}>
+                <MaterialIcons name="close" size={24} color={COLORS.onSurface} />
+              </TouchableOpacity>
+            </View>
+
+            {isStationLoading && !selectedStation ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={{ color: COLORS.onSurfaceVariant, marginTop: 16 }}>Yükleniyor...</Text>
+              </View>
+            ) : selectedStation ? (
+              <ScrollView style={{ marginTop: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+                <Text style={{ color: COLORS.onSurface, fontSize: 20, fontWeight: 'bold', marginBottom: 4 }}>
+                  {selectedStation.name}
+                </Text>
+                {selectedStation.brand && (
+                  <Text style={{ color: COLORS.primary, fontSize: 16, marginBottom: 16 }}>
+                    {selectedStation.brand}
+                  </Text>
+                )}
+                
+                <View style={{ flexDirection: 'row', marginBottom: 16 }}>
+                  <MaterialIcons name="location-on" size={20} color={COLORS.onSurfaceVariant} />
+                  <Text style={{ color: COLORS.onSurfaceVariant, marginLeft: 8 }}>
+                    {selectedStation.district}, {selectedStation.province}
+                  </Text>
+                </View>
+
+                <View style={{ backgroundColor: COLORS.surfaceVariant, padding: 16, borderRadius: 12, marginBottom: 16 }}>
+                  <Text style={{ color: COLORS.onSurface, fontWeight: 'bold', marginBottom: 8 }}>Soketler ({selectedStation.total_sockets})</Text>
+                  {selectedStation.sockets && selectedStation.sockets.map((socket: any, idx: number) => (
+                    <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.surface }}>
+                      <View>
+                        <Text style={{ color: COLORS.onSurface }}>{socket.connector_type || 'Bilinmiyor'}</Text>
+                        <Text style={{ color: COLORS.onSurfaceVariant, fontSize: 12 }}>{socket.current_type} • {socket.service_type}</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ color: COLORS.primary, fontWeight: 'bold' }}>{socket.power_kw} kW</Text>
+                        {socket.is_green_energy && (
+                          <Text style={{ color: '#4CAF50', fontSize: 10, marginTop: 2 }}>Yeşil Enerji</Text>
+                        )}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Eğer bir rota çiziliyorsa, burayı varış noktası yapmak için buton konulabilir (Gelecekte eklenebilir) */}
+                <TouchableOpacity 
+                  style={{ backgroundColor: COLORS.primary, padding: 16, borderRadius: 12, alignItems: 'center' }}
+                  onPress={() => alert('Rota oluşturma özelliği yapım aşamasındadır.')}
+                >
+                  <Text style={{ color: COLORS.background, fontWeight: 'bold', fontSize: 16 }}>Buraya Rota Çiz</Text>
+                </TouchableOpacity>
+
+              </ScrollView>
+            ) : null}
+          </View>
+        </View>
+      )}
+
     </View>
   );
 }

@@ -1,14 +1,14 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from uuid import UUID
-from app.models.station import Station
+from app.models.station import Station, StationSocket
 from app.schemas.station_schema import StationCreate, StationUpdate
 
 def get_station_by_id(
     db: Session,
     station_id: UUID
 ):
-    return db.query(Station).filter(Station.id == station_id).first()
+    return db.query(Station).options(joinedload(Station.sockets)).filter(Station.id == station_id).first()
 
 
 def get_nearby_stations(
@@ -21,7 +21,7 @@ def get_nearby_stations(
 
     user_point = f"SRID=4326;POINT({lon} {lat})"
 
-    return db.query(Station).filter(
+    return db.query(Station).options(joinedload(Station.sockets)).filter(
         func.ST_DWithin(
             Station.location,
             user_point,
@@ -33,7 +33,22 @@ def get_all_stations(
     db: Session,
     limit: int = 50
 ):
-    return db.query(Station).limit(limit).all()
+    return db.query(Station).options(joinedload(Station.sockets)).limit(limit).all()
+
+def get_lightweight_stations(
+    db: Session,
+    limit: int = 20000
+):
+    # Select only required fields to minimize memory and network usage
+    return db.query(
+        Station.id,
+        Station.name,
+        Station.brand,
+        Station.latitude,
+        Station.longitude,
+        Station.is_fast_charge,
+        Station.total_sockets
+    ).limit(limit).all()
 
 def create_station(
     db: Session,
