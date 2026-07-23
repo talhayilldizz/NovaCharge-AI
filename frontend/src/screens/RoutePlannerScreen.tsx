@@ -43,7 +43,7 @@ const COLORS = {
   star: '#FFC107'
 };
 
-export default function RoutePlannerScreen({ navigation }: any) {
+export default function RoutePlannerScreen({ navigation, route }: any) {
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [batteryPercentage, setBatteryPercentage] = useState('100');
@@ -84,11 +84,22 @@ export default function RoutePlannerScreen({ navigation }: any) {
       }
 
       await getCurrentLocation();
+
+      if (route?.params?.destination) {
+        const dest = route.params.destination;
+        setSelectedDestination({
+          lat: dest.latitude,
+          lon: dest.longitude,
+          name: dest.name || 'Seçilen İstasyon'
+        });
+        setEndSearchQuery(dest.name || 'Seçilen İstasyon');
+      }
+
       setIsLoading(false);
     };
 
     init();
-  }, []);
+  }, [route?.params?.destination]);
 
   const getCurrentLocation = async () => {
     setIsSearching(true);

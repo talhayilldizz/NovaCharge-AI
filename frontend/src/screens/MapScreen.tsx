@@ -266,7 +266,8 @@ const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObje
 
         // Kümeleme (Clustering) objesi oluştur
         var markers = L.markerClusterGroup({
-            maxClusterRadius: 60, // Kümelerin kapsama alanı
+            maxClusterRadius: 80, // Kümelerin kapsama alanını büyüttük ki daha az küme çıksın
+            chunkedLoading: true, // Asenkron yükleme (kasmayı inanılmaz derecede azaltır)
             iconCreateFunction: function(cluster) {
                 return L.divIcon({ 
                     html: cluster.getChildCount(), 
@@ -277,6 +278,7 @@ const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObje
         });
 
         var stations = ${JSON.stringify(stationsData)};
+        var markerArray = []; // Toplu ekleme için dizi
 
         stations.forEach(function(station) {
             var isAvailable = station.total_sockets > 0;
@@ -303,11 +305,12 @@ const generateLeafletHTML = (stationsData: any[], userLoc: Location.LocationObje
             if (station.latitude && station.longitude) {
                 var marker = L.marker([station.latitude, station.longitude], {icon: customIcon})
                               .bindPopup(popupContent);
-                markers.addLayer(marker);
+                markerArray.push(marker); // Diziye ekle
             }
         });
 
-        // Tüm kümeleri haritaya tek seferde ekle (Performans artışı)
+        // Tüm markerları tek seferde kümeye ekle (Performansı ~10x artırır)
+        markers.addLayers(markerArray);
         map.addLayer(markers);
     </script>
 </body>
@@ -331,8 +334,9 @@ export default function MapScreen({ navigation, route }: any) {
   // Focus Station Parametresi
   const focusStation = route.params?.focusStation;
 
-  // Search State
+  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
+  const [fastChargeOnly, setFastChargeOnly] = useState(false);
 
   // Station Detail Modal State
   const [selectedStation, setSelectedStation] = useState<any>(null);
@@ -419,7 +423,7 @@ export default function MapScreen({ navigation, route }: any) {
     fetchOSRMRoute();
   }, [routeConfig]);
 
-  // Arama Efekti
+  // Arama ve Filtreleme Efekti
   useEffect(() => {
     let result = allStations;
 
@@ -432,8 +436,12 @@ export default function MapScreen({ navigation, route }: any) {
       );
     }
 
+    if (fastChargeOnly) {
+      result = result.filter(s => s.is_fast_charge === true);
+    }
+
     setFilteredStations(result);
-  }, [searchQuery, allStations]);
+  }, [searchQuery, fastChargeOnly, allStations]);
 
   // Focus Station değiştiğinde kamerayı o istasyona kaydır
   useEffect(() => {
@@ -625,8 +633,8 @@ export default function MapScreen({ navigation, route }: any) {
           </TouchableOpacity>
 
           {!routeConfig && (
-            <>
-              <View style={[styles.searchBar, { paddingHorizontal: 12 }]}>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={[styles.searchBar, { flex: 1, paddingHorizontal: 12 }]}>
                 <MaterialIcons name="search" size={20} color={COLORS.onSurfaceVariant} />
                 <TextInput
                   style={styles.searchInput}
@@ -643,7 +651,22 @@ export default function MapScreen({ navigation, route }: any) {
                   </TouchableOpacity>
                 )}
               </View>
-            </>
+              
+              <TouchableOpacity
+                style={[
+                  styles.iconButton, 
+                  fastChargeOnly && { backgroundColor: COLORS.primary, borderColor: COLORS.primary }
+                ]}
+                onPress={() => setFastChargeOnly(!fastChargeOnly)}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons 
+                  name="bolt" 
+                  size={24} 
+                  color={fastChargeOnly ? COLORS.background : COLORS.onSurface} 
+                />
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </SafeAreaView>
@@ -789,7 +812,10 @@ export default function MapScreen({ navigation, route }: any) {
                 {/* Eğer bir rota çiziliyorsa, burayı varış noktası yapmak için buton konulabilir (Gelecekte eklenebilir) */}
                 <TouchableOpacity 
                   style={{ backgroundColor: COLORS.primary, padding: 16, borderRadius: 12, alignItems: 'center' }}
-                  onPress={() => alert('Rota oluşturma özelliği yapım aşamasındadır.')}
+                  onPress={() => {
+                    setShowStationModal(false);
+                    navigation.navigate('RoutePlanner', { destination: selectedStation });
+                  }}
                 >
                   <Text style={{ color: COLORS.background, fontWeight: 'bold', fontSize: 16 }}>Buraya Rota Çiz</Text>
                 </TouchableOpacity>

@@ -52,12 +52,14 @@ export default function SavedRoutesScreen({ navigation }: any) {
     const waypoints = selectedRoute.ai_plan.charging_stops
       .filter((stop: any) => stop.latitude && stop.longitude)
       .map((stop: any) => `${stop.latitude},${stop.longitude}`)
-      .join('|');
+      .join('/');
 
-    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+    // En güvenilir ve stabil Google Haritalar çoklu durak URL formatı
+    let url = `https://www.google.com/maps/dir/${origin}/`;
     if (waypoints) {
-      url += `&waypoints=${waypoints}`;
+      url += `${waypoints}/`;
     }
+    url += `${destination}/`;
 
     Linking.openURL(url).catch(err => {
       console.error(err);

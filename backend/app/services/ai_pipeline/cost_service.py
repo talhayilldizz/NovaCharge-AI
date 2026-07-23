@@ -25,8 +25,10 @@ def calculate_time_and_cost(ai_selected_stations: List[dict], missing_energy_kwh
     total_time = 0
     charging_stops = []
     
+    num_stops = len(sorted_stops)
     for i, stop in enumerate(sorted_stops):
-        energy_for_this_stop = missing_energy_kwh * (segments[i] / total_segments)
+        # Toplam eksik enerjiyi mola sayısına eşit bölelim ki bir istasyonda absürt yüksek tutar (ör. 1500₺) çıkmasın.
+        energy_for_this_stop = missing_energy_kwh / num_stops if num_stops > 0 else missing_energy_kwh
         
         if energy_for_this_stop < 10:
             energy_for_this_stop = 10.0
