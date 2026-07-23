@@ -16,11 +16,23 @@ const { width } = Dimensions.get('window');
 
 // Tema Renkleri (Tailwind Config'den alındı)
 const COLORS = {
-  background: '#131315',
-  surface: '#131315', // Alt kutu için tam siyah
-  primaryContainer: '#00ff9d',
-  surfaceVariant: '#353437',
-  onSurfaceVariant: '#b9cbbc',
+  background: '#0d0d0f',
+  baseBackground: '#0d0d0f',
+  surface: '#151518',
+  surfaceVariant: '#222226',
+  surfaceContainerLow: '#151518',
+  surfaceContainerHigh: '#222226',
+  surfaceContainerHighest: '#2a2a30',
+  surfaceTint: '#00e38b',
+  primary: '#00e38b',
+  primaryDim: 'rgba(0, 227, 139, 0.15)',
+  secondary: '#00c477',
+  secondaryContainer: 'rgba(0, 196, 119, 0.15)',
+  onSurface: '#ffffff',
+  onSurfaceVariant: '#a1a1aa',
+  danger: '#ff5449',
+  error: '#ff5449',
+  star: '#FFC107'
 };
 
 export default function OnboardingScreen({ navigation }: any) {

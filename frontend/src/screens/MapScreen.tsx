@@ -20,12 +20,23 @@ import { apiClient } from '../lib/apiClient';
 const { width, height } = Dimensions.get('window');
 
 const COLORS = {
-  background: '#131315',
-  surface: '#1c1b1d',
+  background: '#0d0d0f',
+  baseBackground: '#0d0d0f',
+  surface: '#151518',
+  surfaceVariant: '#222226',
+  surfaceContainerLow: '#151518',
+  surfaceContainerHigh: '#222226',
+  surfaceContainerHighest: '#2a2a30',
+  surfaceTint: '#00e38b',
   primary: '#00e38b',
-  onSurface: '#e6e1e5',
-  onSurfaceVariant: '#b9cbbc',
-  surfaceVariant: '#353437',
+  primaryDim: 'rgba(0, 227, 139, 0.15)',
+  secondary: '#00c477',
+  secondaryContainer: 'rgba(0, 196, 119, 0.15)',
+  onSurface: '#ffffff',
+  onSurfaceVariant: '#a1a1aa',
+  danger: '#ff5449',
+  error: '#ff5449',
+  star: '#FFC107'
 };
 
 // Dinamik HTML oluşturan fonksiyon
@@ -763,6 +774,17 @@ export default function MapScreen({ navigation, route }: any) {
                     </View>
                   ))}
                 </View>
+
+                {/* Detaylar ve Yorumlar Butonu */}
+                <TouchableOpacity 
+                  style={{ backgroundColor: COLORS.surfaceVariant, padding: 16, borderRadius: 12, alignItems: 'center', marginBottom: 12 }}
+                  onPress={() => {
+                    setShowStationModal(false);
+                    navigation.navigate('StationDetail', { station: selectedStation });
+                  }}
+                >
+                  <Text style={{ color: COLORS.onSurface, fontWeight: 'bold', fontSize: 16 }}>Detaylar ve Yorumlar</Text>
+                </TouchableOpacity>
 
                 {/* Eğer bir rota çiziliyorsa, burayı varış noktası yapmak için buton konulabilir (Gelecekte eklenebilir) */}
                 <TouchableOpacity 

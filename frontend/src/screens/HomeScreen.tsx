@@ -21,13 +21,23 @@ import BottomMenu from '../components/BottomMenu';
 const { width } = Dimensions.get('window');
 
 const COLORS = {
-  background: '#0d0d0f', // Daha koyu, premium siyah
+  background: '#0d0d0f',
+  baseBackground: '#0d0d0f',
   surface: '#151518',
   surfaceVariant: '#222226',
+  surfaceContainerLow: '#151518',
+  surfaceContainerHigh: '#222226',
+  surfaceContainerHighest: '#2a2a30',
+  surfaceTint: '#00e38b',
   primary: '#00e38b',
   primaryDim: 'rgba(0, 227, 139, 0.15)',
+  secondary: '#00c477',
+  secondaryContainer: 'rgba(0, 196, 119, 0.15)',
   onSurface: '#ffffff',
   onSurfaceVariant: '#a1a1aa',
+  danger: '#ff5449',
+  error: '#ff5449',
+  star: '#FFC107'
 };
 
 const ACTION_BUTTONS = [
@@ -124,12 +134,7 @@ export default function HomeScreen({ navigation }: any) {
 
         {/* Hero Card */}
         <Animated.View style={[styles.heroCardContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <LinearGradient
-            colors={['#1a1a1f', '#0f0f11']}
-            style={styles.heroCard}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
+          <View style={styles.heroCard}>
             {/* Neon Accent Line */}
             <View style={styles.heroAccent} />
 
@@ -145,14 +150,33 @@ export default function HomeScreen({ navigation }: any) {
                 <View style={styles.carImagePlaceholder}>
                   <Image source={require('../../assets/car.png')} style={styles.carImage} />
                 </View>
-                <View style={styles.batteryRow}>
-                  <View>
-                    <Text style={styles.plugType}>{vehicle.plug_type}</Text>
-                    <Text style={styles.batteryLabel}>{vehicle.battery_capacity} kWh</Text>
+                <View style={styles.statsContainer}>
+                  <View style={styles.statBox}>
+                    <MaterialIcons name="battery-charging-full" size={24} color={COLORS.primary} />
+                    <View style={styles.statTexts}>
+                      <Text style={styles.statValue}>{vehicle.battery_capacity} <Text style={styles.statUnit}>kWh</Text></Text>
+                      <Text style={styles.statLabel}>Kapasite</Text>
+                    </View>
                   </View>
-                  <View style={styles.rangeInfo}>
-                    <Text style={styles.rangeValue}>{vehicle.range_km}<Text style={styles.rangeUnit}> km</Text></Text>
-                    <Text style={styles.batteryLabel}>Menzil</Text>
+                  
+                  <View style={styles.statDivider} />
+                  
+                  <View style={styles.statBox}>
+                    <MaterialIcons name="ev-station" size={24} color={COLORS.primary} />
+                    <View style={styles.statTexts}>
+                      <Text style={styles.statValue}>{vehicle.plug_type}</Text>
+                      <Text style={styles.statLabel}>Soket Tipi</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.statDivider} />
+                  
+                  <View style={styles.statBox}>
+                    <MaterialIcons name="speed" size={24} color={COLORS.primary} />
+                    <View style={styles.statTexts}>
+                      <Text style={styles.statValue}>{vehicle.range_km} <Text style={styles.statUnit}>km</Text></Text>
+                      <Text style={styles.statLabel}>Menzil</Text>
+                    </View>
                   </View>
                 </View>
               </>
@@ -172,7 +196,7 @@ export default function HomeScreen({ navigation }: any) {
                 </TouchableOpacity>
               </View>
             )}
-          </LinearGradient>
+          </View>
         </Animated.View>
 
         {/* Quick Actions */}
@@ -306,6 +330,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
     overflow: 'hidden',
+    backgroundColor: COLORS.surface, // Solid background
   },
   heroAccent: {
     position: 'absolute', top: 0, left: 24, right: 24, height: 3,
@@ -327,12 +352,44 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 12, color: COLORS.primary, fontWeight: '700' },
   carImagePlaceholder: { height: 140, justifyContent: 'center', alignItems: 'center', marginVertical: 10 },
   carImage: { width: '100%', height: '100%', resizeMode: 'contain', opacity: 0.9 },
-  batteryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 8 },
-  plugType: { fontSize: 24, fontWeight: '800', color: COLORS.onSurface, letterSpacing: 1 },
-  batteryLabel: { fontSize: 13, color: COLORS.onSurfaceVariant, marginTop: 4, fontWeight: '500' },
-  rangeInfo: { alignItems: 'flex-end' },
-  rangeValue: { fontSize: 26, fontWeight: '800', color: COLORS.primary },
-  rangeUnit: { fontSize: 16, fontWeight: '600', color: COLORS.primary },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceVariant, // Solid background color
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 8,
+  },
+  statBox: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statTexts: {
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.onSurface,
+  },
+  statUnit: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: COLORS.onSurfaceVariant,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
   noVehicleContainer: { alignItems: 'center', paddingVertical: 16 },
   noVehicleIconWrapper: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primaryDim, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   noVehicleTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: '700', marginBottom: 8 },

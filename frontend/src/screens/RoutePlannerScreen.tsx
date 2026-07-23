@@ -24,13 +24,23 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width } = Dimensions.get('window');
 
 const COLORS = {
-  background: '#0D0D0F', // Koyu şık siyah
-  surface: 'rgba(28, 27, 29, 0.7)', // Glassmorphism
-  surfaceSolid: '#1c1b1d',
+  background: '#0d0d0f',
+  baseBackground: '#0d0d0f',
+  surface: '#151518',
+  surfaceVariant: '#222226',
+  surfaceContainerLow: '#151518',
+  surfaceContainerHigh: '#222226',
+  surfaceContainerHighest: '#2a2a30',
+  surfaceTint: '#00e38b',
   primary: '#00e38b',
-  onSurface: '#e6e1e5',
-  onSurfaceVariant: '#b9cbbc',
-  surfaceVariant: 'rgba(53, 52, 55, 0.5)',
+  primaryDim: 'rgba(0, 227, 139, 0.15)',
+  secondary: '#00c477',
+  secondaryContainer: 'rgba(0, 196, 119, 0.15)',
+  onSurface: '#ffffff',
+  onSurfaceVariant: '#a1a1aa',
+  danger: '#ff5449',
+  error: '#ff5449',
+  star: '#FFC107'
 };
 
 export default function RoutePlannerScreen({ navigation }: any) {

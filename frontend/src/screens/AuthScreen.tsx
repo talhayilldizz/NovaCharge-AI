@@ -19,16 +19,23 @@ import { MaterialIcons } from '@expo/vector-icons';
 const { width } = Dimensions.get('window');
 
 const COLORS = {
-  baseBackground: '#131315', // Diğer ekranlarla aynı arka plan rengi
-  surfaceContainerLow: 'rgba(28, 27, 29, 0.4)',
+  background: '#0d0d0f',
+  baseBackground: '#0d0d0f',
+  surface: '#151518',
+  surfaceVariant: '#222226',
+  surfaceContainerLow: '#151518',
+  surfaceContainerHigh: '#222226',
+  surfaceContainerHighest: '#2a2a30',
   surfaceTint: '#00e38b',
-  surfaceContainerHighest: '#353437',
-  surface: '#131315',
-  onSurface: '#e5e1e4',
-  onSurfaceVariant: '#b9cbbc',
-  secondary: '#d1bcff',
-  error: '#ffb4ab',
-  transparentSecondary: 'rgba(112, 0, 255, 0.3)',
+  primary: '#00e38b',
+  primaryDim: 'rgba(0, 227, 139, 0.15)',
+  secondary: '#00c477',
+  secondaryContainer: 'rgba(0, 196, 119, 0.15)',
+  onSurface: '#ffffff',
+  onSurfaceVariant: '#a1a1aa',
+  danger: '#ff5449',
+  error: '#ff5449',
+  star: '#FFC107'
 };
 
 import { supabase } from '../lib/supabase';

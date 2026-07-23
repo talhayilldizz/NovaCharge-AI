@@ -45,6 +45,8 @@ class StationResponse(BaseModel):
     is_fast_charge: bool
     total_sockets: int
     sockets: List[StationSocketResponse] = []
+    average_rating: float = 0.0
+    total_reviews: int = 0
     
     model_config = {"from_attributes": True}
 
@@ -57,5 +59,7 @@ class LightweightStationResponse(BaseModel):
     longitude: float
     is_fast_charge: bool
     total_sockets: int
+    average_rating: float = 0.0
+    total_reviews: int = 0
     
     model_config = {"from_attributes": True}

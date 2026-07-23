@@ -16,12 +16,22 @@ import { apiClient } from '../lib/apiClient';
 import Toast from 'react-native-toast-message';
 
 const COLORS = {
-  background: '#131315',
-  surface: '#1c1b1d',
+  background: '#0d0d0f',
+  baseBackground: '#0d0d0f',
+  surface: '#151518',
+  surfaceVariant: '#222226',
+  surfaceContainerLow: '#151518',
+  surfaceContainerHigh: '#222226',
+  surfaceContainerHighest: '#2a2a30',
+  surfaceTint: '#00e38b',
   primary: '#00e38b',
-  onSurface: '#e6e1e5',
-  onSurfaceVariant: '#b9cbbc',
+  primaryDim: 'rgba(0, 227, 139, 0.15)',
+  secondary: '#00c477',
+  secondaryContainer: 'rgba(0, 196, 119, 0.15)',
+  onSurface: '#ffffff',
+  onSurfaceVariant: '#a1a1aa',
   danger: '#ff5449',
+  error: '#ff5449',
   star: '#FFC107'
 };
 
@@ -33,6 +43,7 @@ export default function StationListScreen({ route, navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(route?.params?.initialShowFavorites || false);
+  const [sortByRating, setSortByRating] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -66,7 +77,7 @@ export default function StationListScreen({ route, navigation }: any) {
 
   // Arama ve Filtreleme (Sadece Favoriler) Efekti
   useEffect(() => {
-    let result = allStations;
+    let result = [...allStations];
 
     // Sadece favorileri göster
     if (showOnlyFavorites) {
@@ -82,8 +93,12 @@ export default function StationListScreen({ route, navigation }: any) {
       );
     }
 
+    if (sortByRating) {
+      result.sort((a, b) => (b.average_rating || 0) - (a.average_rating || 0));
+    }
+
     setFilteredStations(result);
-  }, [searchQuery, showOnlyFavorites, allStations, favorites]);
+  }, [searchQuery, showOnlyFavorites, sortByRating, allStations, favorites]);
 
   // Favori Ekle / Çıkar
   const toggleFavorite = async (stationId: string, stationName: string) => {
@@ -122,13 +137,7 @@ export default function StationListScreen({ route, navigation }: any) {
   };
 
   const handleStationPress = (item: any) => {
-    navigation.navigate('Map', {
-      focusStation: {
-        lat: item.latitude,
-        lon: item.longitude,
-        id: item.id
-      }
-    });
+    navigation.navigate('StationDetail', { station: item });
   };
 
   const renderStation = ({ item }: { item: any }) => {
@@ -140,6 +149,13 @@ export default function StationListScreen({ route, navigation }: any) {
           <View style={{ flex: 1 }}>
             <Text style={styles.stationName} numberOfLines={1}>{item.name}</Text>
             <Text style={styles.providerName}>{item.is_fast_charge ? 'Hızlı Şarj İstasyonu (DC)' : 'Normal Şarj İstasyonu (AC)'}</Text>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              <Ionicons name="star" size={14} color={COLORS.star} />
+              <Text style={{ color: COLORS.onSurfaceVariant, fontSize: 12, marginLeft: 4 }}>
+                {item.average_rating ? item.average_rating.toFixed(1) : '0.0'} ({item.total_reviews || 0} Yorum)
+              </Text>
+            </View>
           </View>
           <TouchableOpacity onPress={() => toggleFavorite(item.id, item.name)} style={{ padding: 4 }}>
             <Ionicons 
@@ -205,6 +221,17 @@ export default function StationListScreen({ route, navigation }: any) {
             name={showOnlyFavorites ? "star" : "star-outline"} 
             size={20} 
             color={showOnlyFavorites ? COLORS.star : COLORS.onSurfaceVariant} 
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.favFilterBtn, sortByRating && styles.favFilterBtnActive, { marginLeft: 8 }]}
+          onPress={() => setSortByRating(!sortByRating)}
+        >
+          <MaterialIcons 
+            name="sort" 
+            size={20} 
+            color={sortByRating ? COLORS.primary : COLORS.onSurfaceVariant} 
           />
         </TouchableOpacity>
       </View>

@@ -21,6 +21,17 @@ class Station(Base):
 
     # Relationships
     sockets = relationship("StationSocket", back_populates="station", cascade="all, delete-orphan")
+    reviews = relationship("StationReview", back_populates="station", cascade="all, delete-orphan")
+
+    @property
+    def average_rating(self) -> float:
+        if not self.reviews:
+            return 0.0
+        return round(sum(r.rating for r in self.reviews) / len(self.reviews), 1)
+
+    @property
+    def total_reviews(self) -> int:
+        return len(self.reviews) if self.reviews else 0
 
 class StationSocket(Base):
     __tablename__ = "station_sockets"

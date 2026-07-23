@@ -15,18 +15,23 @@ import { MaterialIcons } from '@expo/vector-icons';
 const { width } = Dimensions.get('window');
 
 const COLORS = {
-  baseBackground: '#131315',
-  surfaceContainerLow: 'rgba(28, 27, 29, 0.4)',
-  surfaceTint: '#00ff9d',
-  surfaceContainerHighest: '#353437',
-  surfaceContainerHigh: '#2a2a2c',
-  surface: '#131315',
-  onSurface: '#e5e1e4',
-  onSurfaceVariant: '#b9cbbc',
-  secondary: '#d1bcff',
-  secondaryContainer: '#7000ff',
-  error: '#ffb4ab',
-  transparentSecondary: 'rgba(112, 0, 255, 0.3)',
+  background: '#0d0d0f',
+  baseBackground: '#0d0d0f',
+  surface: '#151518',
+  surfaceVariant: '#222226',
+  surfaceContainerLow: '#151518',
+  surfaceContainerHigh: '#222226',
+  surfaceContainerHighest: '#2a2a30',
+  surfaceTint: '#00e38b',
+  primary: '#00e38b',
+  primaryDim: 'rgba(0, 227, 139, 0.15)',
+  secondary: '#00c477',
+  secondaryContainer: 'rgba(0, 196, 119, 0.15)',
+  onSurface: '#ffffff',
+  onSurfaceVariant: '#a1a1aa',
+  danger: '#ff5449',
+  error: '#ff5449',
+  star: '#FFC107'
 };
 
 export default function StationOptimizationScreen({ navigation }: any) {

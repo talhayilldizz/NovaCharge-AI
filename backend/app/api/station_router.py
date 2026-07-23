@@ -22,7 +22,6 @@ def get_lightweight_stations(
     """
     stations = station_service.get_lightweight_stations(db=db, limit=limit)
     
-    # SQLAlchemy query returns tuples of (id, name, latitude, longitude, is_fast_charge, total_sockets)
     # We map them to dictionaries so Pydantic can parse them
     return [
         {
@@ -32,7 +31,9 @@ def get_lightweight_stations(
             "latitude": s[3],
             "longitude": s[4],
             "is_fast_charge": s[5],
-            "total_sockets": s[6]
+            "total_sockets": s[6],
+            "average_rating": 0.0,
+            "total_reviews": 0
         }
         for s in stations
     ]
