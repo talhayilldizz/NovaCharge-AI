@@ -28,6 +28,7 @@ const COLORS = {
   baseBackground: '#0d0d0f',
   surface: '#151518',
   surfaceVariant: '#222226',
+  surfaceSolid: '#1c1b1d',
   surfaceContainerLow: '#151518',
   surfaceContainerHigh: '#222226',
   surfaceContainerHighest: '#2a2a30',
