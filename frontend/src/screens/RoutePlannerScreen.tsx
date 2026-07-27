@@ -52,7 +52,7 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
 
   // Arama State'leri
   const [activeInput, setActiveInput] = useState<'start' | 'end' | null>(null);
-  
+
   // Başlangıç Konumu
   const [startLocation, setStartLocation] = useState<any>(null); // {lat, lon, name}
   const [startSearchQuery, setStartSearchQuery] = useState('Mevcut Konumum');
@@ -111,7 +111,7 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
           Location.getCurrentPositionAsync({}),
           new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
         ]) as any;
-        
+
         setStartLocation({ lat: location.coords.latitude, lon: location.coords.longitude, name: "Mevcut Konumum" });
         setStartSearchQuery("Mevcut Konumum");
         setIsUsingGPS(true);
@@ -120,7 +120,7 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
       }
     } catch (err) {
       console.warn("Konum alınamadı, test konumu kullanılıyor.");
-      setStartLocation({ lat: 40.990, lon: 29.020, name: "Kadıköy (Test)" }); 
+      setStartLocation({ lat: 40.990, lon: 29.020, name: "Kadıköy (Test)" });
       setStartSearchQuery("Kadıköy (Test)");
       setIsUsingGPS(false);
     } finally {
@@ -148,9 +148,9 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
     }
 
     setIsSearching(true);
-    
+
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    
+
     searchTimeoutRef.current = setTimeout(async () => {
       try {
         const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&countrycodes=TR`, {
@@ -181,7 +181,7 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
       setSelectedDestination(locData);
       setEndSearchQuery(shortName);
     }
-    
+
     setSearchResults([]);
     setActiveInput(null);
     Keyboard.dismiss();
@@ -198,6 +198,10 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
     }
     if (!selectedVehicleId) {
       Toast.show({ type: 'error', text1: 'Hata', text2: 'Lütfen garajınızdan bir araç seçin.' });
+      return;
+    }
+    if (!batteryPercentage) {
+      Toast.show({ type: 'error', text1: 'Hata', text2: 'Lütfen başlangıç batarya kapasitesini girin.' });
       return;
     }
 
@@ -229,13 +233,13 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-      
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          
+
           <Text style={styles.headerTitle}>Rotanızı Planlayın</Text>
           <Text style={styles.headerSubtitle}>Yolculuğunuz için en uygun şarj noktalarını yapay zeka ile optimize edelim.</Text>
 
@@ -247,7 +251,7 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
                 <View style={styles.routeLine} />
                 <MaterialIcons name="location-on" size={24} color={COLORS.primary} style={{ marginTop: 2, marginLeft: -2 }} />
               </View>
-              
+
               <View style={styles.locationInputs}>
                 {/* Başlangıç Inputu */}
                 <View style={styles.inputWrapper}>
@@ -261,7 +265,7 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
                       onChangeText={(t) => handleSearch(t, 'start')}
                       onFocus={() => { setActiveInput('start'); setSearchResults([]); }}
                     />
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.gpsButton}
                       onPress={getCurrentLocation}
                     >
@@ -291,12 +295,12 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
             {isSearching && (
               <ActivityIndicator style={{ marginTop: 16 }} color={COLORS.primary} />
             )}
-            
+
             {searchResults.length > 0 && (
               <View style={styles.searchResults}>
                 {searchResults.map((item, index) => (
-                  <TouchableOpacity 
-                    key={index} 
+                  <TouchableOpacity
+                    key={index}
                     style={styles.searchResultItem}
                     onPress={() => selectLocation(item)}
                   >
@@ -333,10 +337,10 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
                       onPress={() => setSelectedVehicleId(v.id)}
                       activeOpacity={0.9}
                     >
-                      <MaterialIcons 
-                        name="directions-car" 
-                        size={36} 
-                        color={isSelected ? COLORS.background : COLORS.onSurface} 
+                      <MaterialIcons
+                        name="directions-car"
+                        size={36}
+                        color={isSelected ? COLORS.background : COLORS.onSurface}
                       />
                       <Text style={[styles.vehicleBrand, isSelected && { color: COLORS.background }]}>
                         {v.brand}
@@ -365,15 +369,15 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
                     onChangeText={setBatteryPercentage}
                     maxLength={3}
                   />
-                  <Text style={{color: COLORS.primary, fontWeight: 'bold'}}>%</Text>
+                  <Text style={{ color: COLORS.primary, fontWeight: 'bold' }}>%</Text>
                 </View>
               </View>
             )}
           </View>
 
           {/* Rota Oluştur Butonu */}
-          <TouchableOpacity 
-            style={[styles.createButton, (!startLocation || !selectedDestination || !selectedVehicleId) && styles.createButtonDisabled]} 
+          <TouchableOpacity
+            style={[styles.createButton, (!startLocation || !selectedDestination || !selectedVehicleId) && styles.createButtonDisabled]}
             activeOpacity={0.8}
             onPress={handleCreateRoute}
             disabled={!startLocation || !selectedDestination || !selectedVehicleId}
@@ -388,7 +392,7 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
               <MaterialIcons name="map" size={24} color={COLORS.background} />
             </LinearGradient>
           </TouchableOpacity>
-          
+
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -402,7 +406,7 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 24, paddingBottom: 120 },
   headerTitle: { fontSize: 32, fontWeight: '800', color: COLORS.onSurface, marginBottom: 8, letterSpacing: -0.5 },
   headerSubtitle: { fontSize: 14, color: COLORS.onSurfaceVariant, marginBottom: 28, lineHeight: 20 },
-  
+
   section: { marginTop: 32 },
   sectionTitle: { fontSize: 20, fontWeight: '700', color: COLORS.onSurface, marginBottom: 16 },
   sectionTitleMini: { fontSize: 16, fontWeight: '700', color: COLORS.onSurface, marginBottom: 4 },
@@ -426,7 +430,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center'
   },
-  
+
   locationContainer: {
     flexDirection: 'row',
   },
@@ -438,28 +442,28 @@ const styles = StyleSheet.create({
   },
   dot: { width: 14, height: 14, borderRadius: 7, backgroundColor: COLORS.onSurfaceVariant },
   routeLine: { flex: 1, width: 2, backgroundColor: COLORS.surfaceVariant, marginVertical: 8 },
-  
+
   locationInputs: { flex: 1, gap: 20 },
   inputWrapper: { width: '100%' },
   inputLabel: { fontSize: 13, color: COLORS.onSurfaceVariant, marginBottom: 8, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  
-  textInput: { 
+
+  textInput: {
     flex: 1,
-    height: 52, 
-    color: COLORS.onSurface, 
-    fontSize: 16, 
+    height: 52,
+    color: COLORS.onSurface,
+    fontSize: 16,
     backgroundColor: COLORS.surfaceSolid,
     borderRadius: 14,
     paddingHorizontal: 16,
-    borderWidth: 1, 
-    borderColor: 'transparent' 
+    borderWidth: 1,
+    borderColor: 'transparent'
   },
   textInputActive: {
     borderColor: COLORS.primary,
     backgroundColor: 'rgba(0, 227, 139, 0.05)'
   },
-  
+
   gpsButton: {
     width: 52,
     height: 52,
@@ -493,7 +497,7 @@ const styles = StyleSheet.create({
   searchResultText: { flex: 1, color: COLORS.onSurface, fontSize: 14, lineHeight: 20 },
 
   emptyGarage: { padding: 24, backgroundColor: COLORS.surface, borderRadius: 20, alignItems: 'center' },
-  
+
   vehicleCard: {
     width: 140,
     padding: 20,
