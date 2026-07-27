@@ -58,6 +58,7 @@ export default function AddVehicleScreen({ route, navigation }: any) {
   const [evDatabase, setEvDatabase] = useState<Record<string, any[]>>({});
   const [brands, setBrands] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [vehicles, setVehicles] = useState([]);
 
   useEffect(() => {
     fetchVehicleCatalog();
@@ -126,6 +127,7 @@ export default function AddVehicleScreen({ route, navigation }: any) {
       return;
     }
 
+
     const vehicleData = {
       brand: brand,
       model: model,
@@ -144,7 +146,7 @@ export default function AddVehicleScreen({ route, navigation }: any) {
           body: JSON.stringify(vehicleData)
         });
       } else {
-        response = await apiClient('/vehicles', {
+        response = await apiClient('/vehicles/', {
           method: 'POST',
           body: JSON.stringify(vehicleData)
         });

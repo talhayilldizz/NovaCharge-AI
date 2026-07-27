@@ -20,11 +20,13 @@ def add_vehicle(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+
     return vehicle_service.create_vehicle(
         db=db,
         vehicle=vehicle,
         user_id=current_user.id
     )
+
 
 @router.get("/", response_model = List[VehicleResponse])
 def get_user_vehicles(

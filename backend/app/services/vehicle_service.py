@@ -20,8 +20,14 @@ def create_vehicle(
     vehicle: VehicleCreate,
     user_id: UUID
 ):
+    existing_vehicles_count = db.query(Vehicle).filter(Vehicle.user_id == user_id).count()
+    
+    vehicle_data = vehicle.model_dump()
+    if existing_vehicles_count == 0:
+        vehicle_data["is_primary"] = True
+
     db_vehicle = Vehicle(
-        **vehicle.model_dump(),
+        **vehicle_data,
         user_id = user_id
     )
 
