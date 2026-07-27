@@ -35,8 +35,10 @@ const COLORS = {
 };
 
 export default function StationDetailScreen({ route, navigation }: any) {
-  const { station } = route.params; // İstasyona dair bilgiler (id, name, brand vs.)
+  // route.params.station tam nesne olmayabilir (sadece id ve name gelmiş olabilir)
+  const initialStation = route.params.station; 
   
+  const [station, setStation] = useState(initialStation);
   const [reviews, setReviews] = useState<any[]>([]);
   const [summary, setSummary] = useState({ average_rating: 0, total_reviews: 0 });
   const [isLoading, setIsLoading] = useState(true);
@@ -48,12 +50,26 @@ export default function StationDetailScreen({ route, navigation }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchReviews();
+    fetchReviewsAndStation();
   }, []);
 
-  const fetchReviews = async () => {
+  const fetchReviewsAndStation = async () => {
     setIsLoading(true);
     try {
+      // 1. Eğer station eksik gelmişse (sadece id ve name varsa), backend'den tamamını çek
+      if (!station.brand || !station.latitude) {
+        try {
+          const stationRes = await apiClient(`/stations/${station.id}`, { method: 'GET' });
+          if (stationRes.ok) {
+            const stationData = await stationRes.json();
+            setStation(stationData);
+          }
+        } catch (e) {
+          console.error("İstasyon detayı çekilemedi:", e);
+        }
+      }
+
+      // 2. Yorumları Çek
       const res = await apiClient(`/reviews/${station.id}`, { method: 'GET' });
       if (res.ok) {
         const data = await res.json();
@@ -61,7 +77,7 @@ export default function StationDetailScreen({ route, navigation }: any) {
         setReviews(data.reviews);
       }
     } catch (err) {
-      console.error('Yorumlar çekilemedi:', err);
+      console.error('Veriler çekilemedi:', err);
     } finally {
       setIsLoading(false);
     }
@@ -90,7 +106,7 @@ export default function StationDetailScreen({ route, navigation }: any) {
         Toast.show({ type: 'success', text1: 'Başarılı', text2: 'Yorumunuz eklendi!' });
         setNewRating(0);
         setNewComment('');
-        fetchReviews(); // Listeyi yenile
+        fetchReviewsAndStation(); // Listeyi yenile
       } else {
         const errData = await res.json();
         Toast.show({ type: 'error', text1: 'Hata', text2: errData.detail || 'Yorum eklenemedi.' });
@@ -137,9 +153,9 @@ export default function StationDetailScreen({ route, navigation }: any) {
             <Text style={styles.reviewRating}>{item.rating}</Text>
           </View>
         </View>
-        {item.comment && (
+        {item.comment ? (
           <Text style={styles.reviewComment}>{item.comment}</Text>
-        )}
+        ) : null}
         <Text style={styles.reviewDate}>{dateStr}</Text>
       </View>
     );

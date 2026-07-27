@@ -17,6 +17,7 @@ class ReviewCreate(BaseModel):
 class ReviewResponse(BaseModel):
     id: UUID
     station_id: UUID
+    station_name: Optional[str] = None
     user_id: UUID
     user_name: Optional[str] = None
     rating: int

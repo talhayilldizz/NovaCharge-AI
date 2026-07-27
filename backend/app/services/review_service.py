@@ -29,7 +29,10 @@ def get_station_reviews(
     station_id: UUID
 ) -> StationReviewsSummary:
 
-    reviews_db = db.query(StationReview).options(joinedload(StationReview.user)).filter(
+    reviews_db = db.query(StationReview).options(
+        joinedload(StationReview.user),
+        joinedload(StationReview.station)
+    ).filter(
         StationReview.station_id == station_id
     ).order_by(StationReview.created_at.desc()).all()
     
@@ -52,6 +55,7 @@ def get_station_reviews(
         responses.append(ReviewResponse(
             id=r.id,
             station_id=r.station_id,
+            station_name=r.station.name if r.station else "Bilinmeyen İstasyon",
             user_id=r.user_id,
             user_name=username,
             rating=r.rating,
@@ -96,7 +100,10 @@ def get_review_by_userid(
     user_id: UUID,
     db: Session
 ):
-    reviews_db = db.query(StationReview).options(joinedload(StationReview.user)).filter(StationReview.user_id == user_id).all()
+    reviews_db = db.query(StationReview).options(
+        joinedload(StationReview.user),
+        joinedload(StationReview.station)
+    ).filter(StationReview.user_id == user_id).order_by(StationReview.created_at.desc()).all()
     
     responses = []
     for r in reviews_db:
@@ -110,6 +117,7 @@ def get_review_by_userid(
         responses.append(ReviewResponse(
             id=r.id,
             station_id=r.station_id,
+            station_name=r.station.name if r.station else "Bilinmeyen İstasyon",
             user_id=r.user_id,
             user_name=username,
             rating=r.rating,

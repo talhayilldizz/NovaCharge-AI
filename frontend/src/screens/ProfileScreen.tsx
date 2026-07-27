@@ -111,7 +111,7 @@ export default function ProfileScreen({ navigation }: any) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          
+
           {/* Avatar Section */}
           <View style={styles.avatarSection}>
             <View style={styles.avatarCircle}>
@@ -126,8 +126,8 @@ export default function ProfileScreen({ navigation }: any) {
           {/* Menu Sections */}
           <View style={styles.menuSection}>
             <Text style={styles.sectionTitle}>Hesap Yönetimi</Text>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.menuItem}
               onPress={() => navigation.navigate('PersonalInfo')}
             >
@@ -138,7 +138,7 @@ export default function ProfileScreen({ navigation }: any) {
               <MaterialIcons name="chevron-right" size={24} color={COLORS.onSurfaceVariant} />
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.menuItem}
               onPress={() => navigation.navigate('Security')}
             >
@@ -149,19 +149,22 @@ export default function ProfileScreen({ navigation }: any) {
               <MaterialIcons name="chevron-right" size={24} color={COLORS.onSurfaceVariant} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('UserComment')}
+            >
               <View style={styles.menuIconWrapper}>
-                <MaterialCommunityIcons name="map-marker-path" size={20} color={COLORS.primary} />
+                <MaterialCommunityIcons name="comment-text-outline" size={20} color={COLORS.primary} />
               </View>
-              <Text style={styles.menuText}>Rotalarım</Text>
+              <Text style={styles.menuText}>Yorumlarım</Text>
               <MaterialIcons name="chevron-right" size={24} color={COLORS.onSurfaceVariant} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.menuSection}>
             <Text style={styles.sectionTitle}>Diğer</Text>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.menuItem}
               onPress={() => navigation.navigate('HelpSupport')}
             >
@@ -172,7 +175,7 @@ export default function ProfileScreen({ navigation }: any) {
               <MaterialIcons name="chevron-right" size={24} color={COLORS.onSurfaceVariant} />
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.menuItem}
               onPress={() => navigation.navigate('PrivacyPolicy')}
             >

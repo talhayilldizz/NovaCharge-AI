@@ -20,6 +20,7 @@ import RoutePlannerScreen from './src/screens/RoutePlannerScreen';
 import StationListScreen from './src/screens/StationListScreen';
 import SavedRoutesScreen from './src/screens/SavedRoutesScreen';
 import StationDetailScreen from './src/screens/StationDetailScreen';
+import UserCommentScreen from './src/screens/UserCommentScreen';
 
 import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 
@@ -98,6 +99,7 @@ export default function App() {
         <Stack.Screen name="SavedRoutes" component={SavedRoutesScreen} />
         <Stack.Screen name="StationList" component={StationListScreen} />
         <Stack.Screen name="StationDetail" component={StationDetailScreen} />
+        <Stack.Screen name="UserComment" component={UserCommentScreen} />
       </Stack.Navigator>
       <Toast config={toastConfig} />
     </NavigationContainer>
