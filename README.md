@@ -102,3 +102,6 @@ docker compose exec backend python scripts/import_stations.py
 docker compose exec backend python scripts/seed_vehicle_catalog.py
 ```
 
+## Veri Kaynaklari (Datasets)
+
+- [Turkey EV Charging Stations Network Geospatial](https://www.kaggle.com/datasets/aliemirkoca/turkey-ev-charging-stations-network-geospatial): Turkiye'deki sarj istasyonlarinin koordinat, marka ve kapasite bilgileri.
