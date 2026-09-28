@@ -11,16 +11,30 @@ NovaCharge AI, elektrikli araç kullanıcıları için tasarlanmış, yapay zeka
 - **Araç Yönetimi:** Kullanıcılar kendi elektrikli araçlarını profillerine ekleyebilir.
 - **Akıllı Rota Planlama:** Başlangıç ve bitiş noktaları girilerek elektrikli araçlar için en optimize seyahat rotası çıkarılır.
 - **Güzergah Üzeri İstasyonlar:** Oluşturulan rota üzerinde, aracınızın kalan menziline ve şarj ihtiyacına en uygun şarj istasyonları yapay zeka destekli olarak listelenir.
+- **Kullancı Bildirimleri:** Kullanıcılar kullandıkları istasyonlar hakkında puan verebilir ve yorum atabilir. Bu sayede yollarda sıkıntılı bi istasyon hakkında diğer kullanıcılar bilgi sahibi olabilir.
 - **Yapay Zeka Asistanı:** OpenAI destekli sistem, maliyet ve süre analizleri yaparak en mantıklı şarj duraklarını tavsiye eder.
 
 <p align="center">
   <img src="frontend/assets/app_screenshotss.png" width="800" alt="NovaCharge Ekran Görüntüleri">
 </p>
 
+## Akıllı Algoritma: Doğru İstasyon Nasıl Bulunuyor?
+
+Sistemin şarj istasyonu tavsiye etme süreci iki aşamalı bir algoritmadan oluşur:
+
+1. **Geometrik Veri Filtreleme (PostGIS & GeoAlchemy2):** 
+   Kullanıcının gideceği toplam menzil ve aracın şarj kapasitesi baz alınarak, yolda kaç kez mola verilmesi gerektiği (ideal kilometre hedefleri) matematiksel olarak hesaplanır. Ardından, veritabanındaki 16.000+ istasyon arasından sadece rotaya yakın olan (`distance_to_route_m`) ve hedeflenen kilometreye en yakın konumdaki adaylar filtrelenir.
+   
+2. **Yapay Zeka Karar Mekanizması (OpenAI):** 
+   Önceden filtrelenmiş bu dar aday listesi OpenAI GPT modeline gönderilir. Yapay zeka bu istasyonlar arasından;
+   - Birbirine çok yakın (50 km'den az) olanları eler.
+   - Hızlı şarj (Fast Charge) imkanı sunanları önceliklendirir.
+   - Rotadan en az sapmayı gerektirecek, en mantıklı olanları seçer ve kullanıcının önüne "Neden bu istasyonu seçtiğinin" açıklamasıyla beraber (Örn: *"100 kW hızlı şarj imkanı sunduğu ve rotadan sapma gerektirmediği için seçildi"*) sunar.
+
 ## Proje Mimarisi
 
 *   **Frontend:** React Native, Expo, Leaflet (Harita)
-*   **Backend:** Python 3.11, FastAPI, SQLAlchemy, GeoAlchemy2, Uvicorn
+*   **Backend:** Python, FastAPI, SQLAlchemy, GeoAlchemy2, Uvicorn
 *   **Veritabanı & Auth:** Supabase (PostgreSQL), JWT
 *   **Yapay Zeka:** OpenAI API (Akıllı istasyon önerileri ve maliyet/süre analizleri)
 *   **Altyapı:** Docker & Docker Compose

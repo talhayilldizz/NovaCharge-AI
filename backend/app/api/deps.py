@@ -13,7 +13,7 @@ load_dotenv()
 
 security = HTTPBearer()
 
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "super-secret-key-varsayilan-degistirilmeli")
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
