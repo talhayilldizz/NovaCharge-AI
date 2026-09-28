@@ -53,7 +53,7 @@ const FAQ_ITEMS = [
 export default function HelpSupportScreen({ navigation }: any) {
 
   const handleContact = () => {
-    Linking.openURL('mailto:destek@voltpilot.com');
+    Linking.openURL('mailto:destek@novacharge.com');
   };
 
   return (

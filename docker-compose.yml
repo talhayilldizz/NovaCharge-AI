@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sarj_app_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    # .env dosyasındaki Supabase URL'sini ve diğer ayarları otomatik görecek
+    env_file:
+      - ./backend/.env

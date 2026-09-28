@@ -154,7 +154,7 @@ export default function RoutePlannerScreen({ navigation, route }: any) {
     searchTimeoutRef.current = setTimeout(async () => {
       try {
         const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&countrycodes=TR`, {
-          headers: { 'User-Agent': 'VoltPilotApp/1.0', 'Accept-Language': 'tr-TR,tr;q=0.9' }
+          headers: { 'User-Agent': 'NovaChargeApp/1.0', 'Accept-Language': 'tr-TR,tr;q=0.9' }
         });
         const data = await response.json();
         setSearchResults(data);

@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.background,
   },
   backButton: {
     padding: 8,
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.background,
     borderRadius: 16,
     paddingHorizontal: 16,
     height: 56,

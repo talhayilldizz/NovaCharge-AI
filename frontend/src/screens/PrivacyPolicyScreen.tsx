@@ -49,7 +49,7 @@ export default function PrivacyPolicyScreen({ navigation }: any) {
 
         <Text style={styles.sectionTitle}>1. Giriş</Text>
         <Text style={styles.paragraph}>
-          VoltPilot olarak gizliliğinize önem veriyoruz. Bu gizlilik sözleşmesi, mobil uygulamamızı kullanırken kişisel verilerinizin nasıl toplandığı, kullanıldığı, saklandığı ve korunduğu hakkında bilgi vermek amacıyla hazırlanmıştır.
+          NovaCharge olarak gizliliğinize önem veriyoruz. Bu gizlilik sözleşmesi, mobil uygulamamızı kullanırken kişisel verilerinizin nasıl toplandığı, kullanıldığı, saklandığı ve korunduğu hakkında bilgi vermek amacıyla hazırlanmıştır.
         </Text>
 
         <Text style={styles.sectionTitle}>2. Toplanan Veriler</Text>
@@ -84,7 +84,7 @@ export default function PrivacyPolicyScreen({ navigation }: any) {
 
         <Text style={styles.sectionTitle}>7. İletişim</Text>
         <Text style={styles.paragraph}>
-          Gizlilik uygulamalarımızla ilgili herhangi bir sorunuz varsa bizimle "Yardım ve Destek" bölümünden veya destek@voltpilot.com adresi üzerinden iletişime geçebilirsiniz.
+          Gizlilik uygulamalarımızla ilgili herhangi bir sorunuz varsa bizimle "Yardım ve Destek" bölümünden veya destek@novacharge.com adresi üzerinden iletişime geçebilirsiniz.
         </Text>
 
       </ScrollView>
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.background,
   },
   backButton: {
     padding: 8,

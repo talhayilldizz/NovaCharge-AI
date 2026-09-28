@@ -5,7 +5,7 @@ from app.database.session import get_db
 from app.models import station
 
 
-app = FastAPI(title="VoltPilot AI API")
+app = FastAPI(title="NovaCharge AI API")
 
 app.include_router(user_router.router)
 app.include_router(vehicle_catalog_router.router)
@@ -17,7 +17,7 @@ app.include_router(review_router.router)
 
 @app.get("/")
 def read_root():
-    return {"message": "VoltPilot AI API Sorunsuz Calisiyor!"}
+    return {"message": "NovaCharge AI API Sorunsuz Calisiyor!"}
 
 @app.get("/test-db")
 def test_db_connection(db: Session = Depends(get_db)):

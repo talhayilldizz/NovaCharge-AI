@@ -26,7 +26,7 @@ import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 
 const Stack = createNativeStackNavigator();
 
-// VoltPilot özel Toast bildirim konfigürasyonu
+// NovaCharge özel Toast bildirim konfigürasyonu
 const toastConfig = {
   success: (props: any) => (
     <BaseToast
