@@ -14,7 +14,7 @@ NovaCharge AI, elektrikli araç kullanıcıları için tasarlanmış, yapay zeka
 - **Yapay Zeka Asistanı:** OpenAI destekli sistem, maliyet ve süre analizleri yaparak en mantıklı şarj duraklarını tavsiye eder.
 
 <p align="center">
-  <img src="frontend/assets/app_screenshots.png" width="800" alt="NovaCharge Ekran Görüntüleri">
+  <img src="frontend/assets/app_screenshotss.png" width="800" alt="NovaCharge Ekran Görüntüleri">
 </p>
 
 ## Proje Mimarisi
