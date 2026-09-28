@@ -44,7 +44,7 @@ export default function PrivacyPolicyScreen({ navigation }: any) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+
         <Text style={styles.lastUpdated}>Son Güncelleme: 19 Temmuz 2026</Text>
 
         <Text style={styles.sectionTitle}>1. Giriş</Text>
@@ -84,7 +84,7 @@ export default function PrivacyPolicyScreen({ navigation }: any) {
 
         <Text style={styles.sectionTitle}>7. İletişim</Text>
         <Text style={styles.paragraph}>
-          Gizlilik uygulamalarımızla ilgili herhangi bir sorunuz varsa bizimle "Yardım ve Destek" bölümünden veya destek@novacharge.com adresi üzerinden iletişime geçebilirsiniz.
+          Gizlilik uygulamalarımızla ilgili herhangi bir sorunuz varsa bizimle "Yardım ve Destek" bölümünden veya destek adresi üzerinden iletişime geçebilirsiniz.
         </Text>
 
       </ScrollView>
